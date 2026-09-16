@@ -6,7 +6,7 @@
 
 ## ⚡ Como Funciona
 
-1. **Scanner 100% em Nuvem com IA (GitHub Actions + Gemini 2.5 Flash)**:
+1. **Scanner 100% em Nuvem com IA (GitHub Actions + Gemini 3.6 Flash)**:
    - Roda automaticamente todos os dias às **08:00** e às **18:00** (Horário de Brasília) ou sob demanda com 1 clique no GitHub.
    - Utiliza **Google Search Grounding** para pesquisar diários oficiais, portais de prefeituras e notícias da região.
    - Detecta mudanças de status (*Licitação de Banca* ➔ *Edital Publicado* ➔ *Inscrições Abertas* ➔ *Cancelado/Suspenso*).

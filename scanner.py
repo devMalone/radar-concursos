@@ -1,4 +1,4 @@
-﻿"""
+"""
 Radar de Concursos — Scanner Inteligente com Gemini IA & Supabase
 Monitora concursos, processos seletivos e licitações na região de São José do Rio Preto e interior de SP.
 """
@@ -39,7 +39,7 @@ def log(msg):
 
 def consultar_gemini_com_busca():
     """Consulta o Gemini com capacidade de busca no Google para capturar concursos recentes."""
-    log("Iniciando varredura com Gemini 2.5 Flash + Google Search...")
+    log("Iniciando varredura com Gemini 3.6 Flash + Google Search...")
     
     ano_atual = datetime.now().year
     cidades_str = ", ".join(CIDADES_MONITORADAS)
@@ -77,7 +77,7 @@ Atenção especial para cargos da área de Licitações, Compras, Administrativo
 Se não encontrar novidades para alguma cidade, liste as cidades onde encontrou movimentações reais.
 """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
     
     payload = {
         "contents": [
