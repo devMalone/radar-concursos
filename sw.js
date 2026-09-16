@@ -1,5 +1,5 @@
-﻿// Service Worker — Radar de Concursos PWA
-const CACHE_NAME = 'radar-concursos-v1';
+// Service Worker — Radar de Concursos PWA
+const CACHE_NAME = 'radar-concursos-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
