@@ -1,8 +1,9 @@
-// js/consulta.js — Consulta Avulsa Instantânea com Gemini 3.6 Flash & Google Search
+// js/consulta.js — Consulta Avulsa Instantânea com IA Gemini 3.6 Flash com Rigor Temporal
 
-import { state, salvarLocal } from './state.js';
+import { state, salvarLocal, sanitizarItemConcurso } from './state.js';
 import { abrirModal, fecharModal, mostrarToast } from './utils.js';
 import { renderizarRadar } from './radar.js';
+import { PORTAIS_CIDADES } from './portais.js';
 
 export function abrirModalConsultaAvulsa() {
   const form = document.getElementById('consultaForm');
@@ -36,34 +37,60 @@ export async function executarConsultaAvulsaLive() {
   if (form) form.style.display = 'none';
   if (loading) loading.style.display = 'flex';
 
-  const prompt = `Você é um especialista em monitoramento de concursos públicos e licitações no estado de São Paulo.
-Faça uma pesquisa profunda e atualizada na web sobre concursos públicos, processos seletivos e licitações de bancas organizadoras no município de ${cidade} - SP, com foco em: ${cargo || 'Geral / Administrativo / Licitações'}.
-Ano de referência: ${new Date().getFullYear()} ou meses recentes.
+  const dataAtual = new Date();
+  const hojeStr = dataAtual.toLocaleDateString('pt-BR');
+  const anoAtual = dataAtual.getFullYear();
 
-REGRAS DE STATUS OBRIGATÓRIAS:
-- "Edital Aberto": use APENAS se as inscrições estiverem ABERTAS hoje e o candidato ainda puder se inscrever.
-- "Em Andamento (Recursos / Gabarito)": use se as inscrições já fecharam, ou se as provas já foram realizadas e está em fase de gabarito preliminar, recursos ou resultados.
-- "Licitação": use quando a prefeitura estiver contratando a banca examinadora (pregão ou dispensa).
-- "Previsto": use para concurso anunciado sem edital publicado.
-- "Cancelado / Suspenso": se foi suspenso ou cancelado.
+  const portaisConhecidos = PORTAIS_CIDADES[cidade];
+  const contextoPortal = portaisConhecidos 
+    ? `Portais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}`
+    : '';
 
-REGRAS DE LINKS OBRIGATÓRIAS:
-- NUNCA invente URLs falsas ou rotas genéricas (/licitacoes ou /concursos) se você não as viu comprovadamente na busca.
-- Retorne apenas links reais verificados da banca examinadora (ex: consulplan, vunesp) ou a página real de serviços do município, ou o domínio oficial raiz.
+  const prompt = `Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
+Faça uma pesquisa rigorosa na web com o Google Search sobre concursos públicos, processos seletivos e contratação de bancas examinadoras para o município de: ${cidade} - SP.
+Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Segurança'}.
 
-Retorne EXCLUSIVAMENTE um array JSON puro:
+${contextoPortal}
+
+DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
+
+⚠️ DIRETRIZES DE TEMPORALIDADE E ANTI-ANACRONISMO (CRÍTICO):
+1. Verifique SEMPRE a data do edital e o encerramento das inscrições:
+   - Editais de 2024, 2023 ou meses passados cujas inscrições já fecharam ou cujas provas já foram realizadas NÃO ESTÃO ABERTOS!
+   - NUNCA marque um concurso com "Edital Aberto" se a data limite de inscrição já passou em relação a ${hojeStr}.
+2. Se o certame é de 2024/2025 e as provas já aconteceram ou as inscrições fecharam:
+   - Use o status: "Em Andamento (Recursos / Gabarito)".
+   - E no prazo_inscricao informe: "Inscrições encerradas • Provas realizadas • Fase de recursos/classificação".
+3. Se o certame de 2024 já foi concluído/homologado e há expectativa, estudos ou movimentação da prefeitura para um novo certame (ex: Guarda Civil Municipal de Rio Preto, onde o concurso anterior foi em 2024 e a prefeitura estuda novas vagas para 2026/2027):
+   - Use o status: "Previsto".
+   - Título: "Guarda Civil Municipal — Novo Concurso em Planejamento".
+   - Explique no resumo_ia: "O último concurso ocorreu em 2024 pela banca Vunesp (encerrado). O município planeja novo edital para ampliação do efetivo."
+4. Status válidos permitidos:
+   - "Edital Aberto": SOMENTE se as inscrições estiverem formalmente abertas hoje para novos inscritos.
+   - "Em Andamento (Recursos / Gabarito)": se as provas já ocorreram ou as inscrições já fecharam e está em fase de resultados.
+   - "Licitação": quando o município abriu licitação/pregão/dispensa para contratar a banca organizadora.
+   - "Previsto": certames autorizados, comissão formada ou estudos anunciados.
+   - "Cancelado / Suspenso": certames com atos revogados ou suspensos judicialmente.
+
+⚠️ REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
+- Retorne links REAIS e que funcionem ao clicar:
+  - O link oficial da banca organizadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br, etc.)
+  - OU o portal oficial de concursos/serviços da prefeitura.
+- NUNCA invente rotas falsas (como /licitacoes, /concursos-2024) que geram tela de erro 404. Se não encontrar o link profundo exato do PDF, retorne a página principal de concursos do município ou da banca.
+
+Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
 [
   {
     "cidade": "${cidade}",
-    "orgao": "Nome do órgão (ex: Prefeitura de ${cidade})",
-    "titulo": "Título oficial do concurso ou licitação",
+    "orgao": "Ex: Prefeitura Municipal de ${cidade}",
+    "titulo": "Título oficial e específico do concurso ou processo seletivo",
     "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
     "cargos": ["Cargo 1", "Cargo 2"],
-    "areas": ["Administrativo", "Licitações", "Geral"],
+    "areas": ["Administrativo", "Segurança", "Geral"],
     "salario_resumo": "Vencimento informado ou A consultar",
-    "prazo_inscricao": "Status das inscrições e provas",
-    "link_oficial": "URL oficial real verificada",
-    "resumo_ia": "Resumo objetivo explicando o momento exato do certame."
+    "prazo_inscricao": "Ex: Inscrições abertas até DD/MM/AAAA OU Inscrições encerradas • Provas aplicadas",
+    "link_oficial": "URL real verificada e funcional",
+    "resumo_ia": "Resumo analítico destacando a banca, a situação real de datas e o estágio atual do concurso."
   }
 ]`;
 
@@ -85,19 +112,21 @@ Retorne EXCLUSIVAMENTE um array JSON puro:
     const data = await response.json();
     const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    // Limpa possíveis marcadores Markdown
+    // Limpa delimitadores de bloco JSON
     const clean = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
     const sIdx = clean.indexOf('[');
     const eIdx = clean.lastIndexOf(']');
 
     if (sIdx !== -1 && eIdx !== -1) {
-      const items = JSON.parse(clean.substring(sIdx, eIdx + 1));
-      if (items.length > 0) {
-        items.forEach(item => {
+      const parsedItems = JSON.parse(clean.substring(sIdx, eIdx + 1));
+      if (parsedItems.length > 0) {
+        parsedItems.forEach(rawItem => {
+          // Passa pelo filtro sanitizador rigoroso
+          const item = sanitizarItemConcurso(rawItem);
           item.id = `avulso_${cidade}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
           item.updated_at = new Date().toISOString();
           
-          // Remove duplicações se já existir título similar
+          // Se já existir certame com mesmo título, atualiza; senão insere no topo
           const existingIdx = state.concursos.findIndex(c => c.titulo.toLowerCase() === item.titulo.toLowerCase());
           if (existingIdx !== -1) {
             state.concursos[existingIdx] = item;
@@ -109,16 +138,16 @@ Retorne EXCLUSIVAMENTE um array JSON puro:
         salvarLocal();
         renderizarRadar();
         fecharModal('modalConsultaAvulsa');
-        mostrarToast(`Varredura concluída: ${items.length} registro(s) obtido(s)!`, 'success');
+        mostrarToast(`Pesquisa concluída: ${parsedItems.length} certame(s) verificado(s)!`, 'success');
         return;
       }
     }
     
     fecharModal('modalConsultaAvulsa');
-    mostrarToast('Varredura concluída. Nenhuma alteração recente encontrada.', 'info');
+    mostrarToast('Varredura concluída. Nenhuma novidade recente encontrada para este critério.', 'info');
   } catch (err) {
     console.warn('[Consulta Avulsa] Erro:', err);
     fecharModal('modalConsultaAvulsa');
-    mostrarToast('Erro ao consultar Gemini ou limite de requisições excedido.', 'error');
+    mostrarToast('Falha na comunicação com o Gemini. Verifique a chave ou tente em instantes.', 'error');
   }
 }

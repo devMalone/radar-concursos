@@ -44,48 +44,40 @@ def consultar_gemini_com_busca():
     ano_atual = datetime.now().year
     cidades_str = ", ".join(CIDADES_MONITORADAS)
     
+    data_hoje_str = datetime.now().strftime('%d/%m/%Y')
     prompt = f"""
-Você é um especialista em monitoramento de concursos públicos e licitações de bancas organizadoras no estado de São Paulo.
-Faça uma pesquisa aprofundada na web para identificar concursos públicos, processos seletivos e licitações de contratação de bancas organizadoras recentes para os seguintes municípios da região de São José do Rio Preto / Catanduva - SP:
+Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
+Faça uma pesquisa rigorosa na web com o Google Search para identificar concursos públicos, processos seletivos e licitações de contratação de bancas organizadoras para os seguintes municípios da região de São José do Rio Preto / Catanduva - SP:
 {cidades_str}
 
-Ano de referência: {ano_atual} ou notícias recentes dos últimos meses.
+DATA EXATA DE REFERÊNCIA HOJE: {data_hoje_str} (Ano atual: {ano_atual}).
 
-Procure por:
-1. Editais com inscrições abertas ou prestes a abrir (Prefeituras, Câmaras, Autarquias, SAAE).
-2. Licitações para contratação de banca organizadora (Vunesp, IBAM, Avança SP, Consesp, Instituto Consulplan, etc.) que indicam concurso previsto.
-3. Concursos em andamento onde as provas já aconteceram ou as inscrições se encerraram e o certame está em fase de gabaritos, recursos ou resultados.
-4. Notícias de concursos anunciados ou com comissão formada pelas administrações municipais.
-5. Notícias de concursos que foram suspensos, adiados ou cancelados recentemente.
+⚠️ DIRETRIZES RIGOROSAS DE TEMPORALIDADE (ANTI-ANACRONISMO):
+1. Verifique sempre se as inscrições ainda estão ativas em relação a {data_hoje_str}:
+   - Editais de 2024, 2023 ou meses anteriores com inscrições encerradas ou provas já realizadas NUNCA devem ser classificados como "Edital Aberto"!
+   - Se as provas já foram aplicadas ou inscrições fecharam, o status OBRIGATÓRIO é "Em Andamento (Recursos / Gabarito)".
+   - Se o certame anterior de 2024 já foi homologado e o município estuda/planeja novo concurso para 2026/2027 (ex: Guarda Civil Municipal de Rio Preto, cujo certame anterior da Vunesp foi em 2024), classifique como "Previsto" com título "Guarda Civil Municipal — Novo Concurso em Estudos" e explique isso no resumo.
+2. "Edital Aberto" é EXCLUSIVAMENTE para certames onde qualquer pessoa ainda consiga se inscrever HOJE (data final >= {data_hoje_str}).
 
-REGRAS OBRIGATÓRIAS DE STATUS:
-- "Edital Aberto": use EXCLUSIVAMENTE se as inscrições estiverem abertas hoje e o candidato ainda puder se inscrever.
-- "Em Andamento (Recursos / Resultados)": use se as inscrições já fecharam, se as provas já foram aplicadas ou se está em fase de gabarito preliminar, recursos ou convocação de aprovados. NUNCA classifique como "Edital Aberto" se as inscrições já encerraram!
-- "Licitação": use quando a prefeitura está contratando a banca examinadora (pregão, dispensa ou aviso de contratação).
-- "Previsto": use para comissões formadas ou concursos anunciados sem edital ainda.
-- "Cancelado / Suspenso": para certames suspensos por decisões judiciais ou revogados pelo município.
+⚠️ REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
+- Retorne APENAS links reais e acessíveis da banca examinadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br) ou a página oficial de concursos da prefeitura.
+- NUNCA invente rotas ou URLs falsas (ex: /licitacoes, /concursos-2024) que resultem em erro 404.
 
-REGRAS OBRIGATÓRIAS DE LINKS:
-- NUNCA invente rotas ou URLs genéricas fictícias como /licitacoes ou /concursos se você não verificou que ela existe de fato.
-- Retorne APENAS a URL real exata verificada na busca (ex: página da banca examinadora como consulplan.org.br ou vunesp.com.br, ou a página real de serviços do município). Se não tiver o link exato da página interna, forneça o domínio oficial principal da prefeitura (ex: https://www.potirendaba.sp.gov.br).
-
-Retorne EXCLUSIVAMENTE um array JSON (sem blocos de texto ou markdown desnecessários):
+Retorne EXCLUSIVAMENTE um array JSON:
 [
   {{
     "cidade": "Nome da Cidade",
-    "orgao": "Ex: Prefeitura Municipal de Potirendaba",
-    "titulo": "Ex: Concurso Público 001/{ano_atual}",
-    "status": "Edital Aberto" OU "Em Andamento (Recursos / Resultados)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
-    "cargos": ["Cargo 1", "Cargo 2", "Agente de Licitações"],
-    "areas": ["Administrativo", "Licitações", "Educação", "Saúde", "Geral"],
+    "orgao": "Ex: Prefeitura Municipal de Catanduva",
+    "titulo": "Título oficial e específico do concurso ou processo seletivo",
+    "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
+    "cargos": ["Cargo 1", "Cargo 2"],
+    "areas": ["Administrativo", "Licitações", "Educação", "Segurança"],
     "salario_resumo": "Ex: R$ 2.400 a R$ 6.800",
-    "prazo_inscricao": "Ex: Provas realizadas • Fase de Recursos e Gabaritos ou Inscrições até DD/MM",
+    "prazo_inscricao": "Ex: Inscrições abertas até DD/MM/AAAA OU Provas realizadas • Fase de Recursos",
     "link_oficial": "URL oficial verificada da banca ou do portal",
-    "resumo_ia": "Resumo de 2 a 3 linhas explicando o momento atual do certame (ex: banca organizadora, se provas já ocorreram, se há recursos abertos, etc.)."
+    "resumo_ia": "Resumo de 2 a 3 linhas explicando a banca, a situação real de datas e o momento exato do certame."
   }}
 ]
-
-Atenção especial para cargos da área de Licitações, Compras, Administrativo, Agente de Trânsito, Fiscal e TI.
 """
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
@@ -133,8 +125,21 @@ Atenção especial para cargos da área de Licitações, Compras, Administrativo
             if start_idx != -1 and end_idx != -1:
                 json_str = cleaned_json[start_idx:end_idx + 1]
                 concursos = json.loads(json_str)
-                log(f"Gemini identificou {len(concursos)} concursos/licitações relevantes.")
-                return concursos
+
+                # Sanitização defensiva contra anacronismos
+                concursos_sanitizados = []
+                for item in concursos:
+                    texto = f"{item.get('titulo', '')} {item.get('prazo_inscricao', '')} {item.get('resumo_ia', '')}".lower()
+                    if item.get("status") == "Edital Aberto":
+                        if any(w in texto for w in ["2024", "2023", "2022", "encerrad", "provas realizadas", "provas aplicadas", "ocorreu em", "já ocorreram", "classificação"]):
+                            if any(w in texto for w in ["previsto", "estudos", "planeja", "novas vagas", "expansão"]):
+                                item["status"] = "Previsto"
+                            else:
+                                item["status"] = "Em Andamento (Recursos / Gabarito)"
+                    concursos_sanitizados.append(item)
+
+                log(f"Gemini identificou {len(concursos_sanitizados)} concursos/licitações relevantes e validados.")
+                return concursos_sanitizados
             else:
                 log("Não foi possível localizar array JSON na resposta do modelo.")
                 return []
