@@ -54,8 +54,56 @@ window.radarActions = {
   ativarNotificacoes,
   testarNotificacaoNativa,
   toggleCidadeAlerta,
-  toggleMostrarChave
+  toggleMostrarChave,
+  openEcosystemModal,
+  closeEcosystemModal,
+  navigateToApp
 };
+
+// ================= ECOSSISTEMA ANTIGRAVITY (CROSS-APP SWITCHER) =================
+function getEcosystemAppUrl(targetApp) {
+  const isGitHubPages = window.location.hostname.includes('github.io');
+  if (isGitHubPages) {
+    const urls = {
+      radar: 'https://devmalone.github.io/radar-concursos/',
+      financeiro: 'https://devmalone.github.io/controle-financeiro/',
+      rotina: 'https://devmalone.github.io/rotina-semanal/'
+    };
+    return urls[targetApp] || '#';
+  }
+  const localUrls = {
+    radar: '../Radar de Concursos/index.html',
+    financeiro: '../Controle Financeiro/index.html',
+    rotina: '../Rotina Semanal/index.html'
+  };
+  return localUrls[targetApp] || '#';
+}
+
+function openEcosystemModal() {
+  const modal = document.getElementById('ecosystemModal');
+  if (modal) {
+    modal.classList.add('active');
+    refreshIcons();
+  }
+}
+
+function closeEcosystemModal() {
+  const modal = document.getElementById('ecosystemModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function navigateToApp(targetApp) {
+  const url = getEcosystemAppUrl(targetApp);
+  if (url && url !== '#') {
+    window.location.href = url;
+  }
+}
+
+window.openEcosystemModal = openEcosystemModal;
+window.closeEcosystemModal = closeEcosystemModal;
+window.navigateToApp = navigateToApp;
 
 // ================= SINCRONIZAÇÃO DE ALTURA (100dvh) =================
 function sincronizarAlturaViewport() {

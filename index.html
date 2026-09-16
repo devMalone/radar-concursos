@@ -42,6 +42,10 @@
     </div>
 
     <div class="top-actions">
+      <button class="sync-action-btn" id="btnEcosystemRadar" onclick="window.openEcosystemModal()" title="Ecossistema Antigravity (Alternar App)" aria-label="Alternar Aplicativo">
+        <i data-lucide="layout-grid" style="width: 14px; height: 14px;"></i>
+      </button>
+
       <button class="install-pill-btn" id="btnInstalarApp" style="display: none;" title="Instalar Aplicativo">
         <i data-lucide="download" style="width: 13px; height: 13px;"></i>
         <span>Instalar</span>
@@ -474,6 +478,82 @@
           <i data-lucide="check" style="width: 15px; height: 15px;"></i>
           <span>Concluir</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DO ECOSSISTEMA ANTIGRAVITY (CROSS-APP SWITCHER) -->
+  <div class="modal-overlay center" id="ecosystemModal" onclick="if(event.target === this) window.closeEcosystemModal()">
+    <div class="modal-container" style="max-width: 460px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="layout-grid" style="width: 18px; height: 18px; color: var(--accent);"></i>
+            <span>Ecossistema Antigravity</span>
+          </h2>
+          <span class="modal-subtitle">Selecione o utilitário para alternar rapidamente</span>
+        </div>
+        <button class="modal-close-btn" onclick="window.closeEcosystemModal()">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <!-- RADAR DE CONCURSOS (ATUAL) -->
+        <div class="ecosystem-app-item is-current" title="Aplicativo em uso no momento">
+          <div class="ecosystem-app-info">
+            <div class="ecosystem-app-icon" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4; border: 1px solid rgba(6, 182, 212, 0.35);">
+              <i data-lucide="radar" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div class="ecosystem-app-texts">
+              <span class="ecosystem-app-name">Radar de Concursos SP</span>
+              <span class="ecosystem-app-desc">Editais abertos, busca inteligente IA e cronograma de provas</span>
+            </div>
+          </div>
+          <span class="ecosystem-app-badge badge-current-app">
+            <i data-lucide="check" style="width: 11px; height: 11px;"></i>
+            <span>Atual</span>
+          </span>
+        </div>
+
+        <!-- CONTROLE FINANCEIRO -->
+        <div class="ecosystem-app-item" onclick="window.navigateToApp('financeiro')" title="Abrir Controle Financeiro">
+          <div class="ecosystem-app-info">
+            <div class="ecosystem-app-icon" style="background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25);">
+              <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div class="ecosystem-app-texts">
+              <span class="ecosystem-app-name">Controle Financeiro</span>
+              <span class="ecosystem-app-desc">Orçamento mensal, parcelamentos inteligentes e tetos</span>
+            </div>
+          </div>
+          <span class="ecosystem-app-badge badge-switch-app">
+            <span>Acessar</span>
+            <i data-lucide="arrow-up-right" style="width: 12px; height: 12px;"></i>
+          </span>
+        </div>
+
+        <!-- ROTINA SEMANAL -->
+        <div class="ecosystem-app-item" onclick="window.navigateToApp('rotina')" title="Abrir Rotina Semanal">
+          <div class="ecosystem-app-info">
+            <div class="ecosystem-app-icon" style="background: rgba(139, 92, 246, 0.12); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.25);">
+              <i data-lucide="calendar-clock" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div class="ecosystem-app-texts">
+              <span class="ecosystem-app-name">Rotina Semanal</span>
+              <span class="ecosystem-app-desc">Horários ao vivo, hábitos, consistência e alertas sonoros</span>
+            </div>
+          </div>
+          <span class="ecosystem-app-badge badge-switch-app">
+            <span>Acessar</span>
+            <i data-lucide="arrow-up-right" style="width: 12px; height: 12px;"></i>
+          </span>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+        <span>PWA Local-First • Offline Ready</span>
+        <span>Antigravity Ecosystem</span>
       </div>
     </div>
   </div>
