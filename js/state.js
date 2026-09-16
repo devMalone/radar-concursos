@@ -12,7 +12,8 @@ export const state = {
     supabaseUrl: 'https://vbnzvyxhfnsmbmgxahvn.supabase.co',
     supabaseKey: '',
     geminiKey: '',
-    braveKey: ''
+    braveKey: '',
+    cidadesAlertas: ['São José do Rio Preto', 'Catanduva', 'Potirendaba', 'Mirassol']
   },
   modalStack: [],
   supabase: null,
@@ -252,12 +253,22 @@ export function carregarDadosLocais() {
   if (gKey) state.config.geminiKey = gKey;
   if (bKey) state.config.braveKey = bKey;
 
+  const cAlertas = localStorage.getItem('radar_cidades_alertas');
+  if (cAlertas) {
+    try {
+      state.config.cidadesAlertas = JSON.parse(cAlertas);
+    } catch (e) {
+      state.config.cidadesAlertas = ['São José do Rio Preto', 'Catanduva', 'Potirendaba', 'Mirassol'];
+    }
+  }
+
   salvarLocal();
 }
 
 export function salvarLocal() {
   localStorage.setItem(CACHE_KEY, JSON.stringify(state.concursos));
   localStorage.setItem('radar_acompanhados', JSON.stringify(state.acompanhados));
+  localStorage.setItem('radar_cidades_alertas', JSON.stringify(state.config.cidadesAlertas || []));
   if (state.config.supabaseUrl) localStorage.setItem('radar_supabase_url', state.config.supabaseUrl);
   if (state.config.supabaseKey) localStorage.setItem('radar_supabase_key', state.config.supabaseKey);
   if (state.config.geminiKey) localStorage.setItem('radar_gemini_key', state.config.geminiKey);

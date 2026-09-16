@@ -58,13 +58,27 @@ export async function sincronizarSupabase(comFeedback = false) {
         mostrarToast('Erro ao sincronizar: ' + error.message, 'error');
       }
     } else if (data && data.length > 0) {
-      // Safe merge defensivo para não perder dados locais
+      // Safe merge defensivo para não perder dados locais e disparo de push para cidades monitoradas
       data.forEach(incoming => {
         const idx = state.concursos.findIndex(c => c.id === incoming.id);
         if (idx >= 0) {
           state.concursos[idx] = { ...state.concursos[idx], ...incoming };
         } else {
           state.concursos.unshift(incoming);
+          const monitoradas = state.config.cidadesAlertas || [];
+          if (monitoradas.includes(incoming.cidade)) {
+            if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
+              navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(`Radar SP: ${incoming.cidade}`, {
+                  body: `${incoming.titulo} (${incoming.status})`,
+                  icon: './favicon.png',
+                  badge: './favicon.png',
+                  tag: `alerta_${incoming.id}`,
+                  data: { url: './index.html' }
+                });
+              }).catch(() => {});
+            }
+          }
         }
       });
 

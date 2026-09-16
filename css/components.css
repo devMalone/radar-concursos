@@ -336,6 +336,38 @@
   width: 100%;
 }
 
+/* ================= CHIPS DE MUNICÍPIOS PARA ALERTAS PUSH ================= */
+.alert-cities-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.alert-city-chip {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.alert-city-chip:hover {
+  border-color: #3b82f6;
+  color: var(--text);
+}
+
+.alert-city-chip.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #34d399;
+}
+
 /* ================= CARDS DE CONCURSOS ================= */
 .concursos-grid {
   display: flex;

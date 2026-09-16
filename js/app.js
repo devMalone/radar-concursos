@@ -19,7 +19,8 @@ import {
 } from './radar.js';
 import { 
   renderizarMunicipios, 
-  abrirModalPortais 
+  abrirModalPortais,
+  PORTAIS_CIDADES
 } from './portais.js';
 import { 
   abrirModalConsultaAvulsa, 
@@ -51,6 +52,8 @@ window.radarActions = {
   testarConexaoSupabase,
   salvarConfiguracoes,
   ativarNotificacoes,
+  testarNotificacaoNativa,
+  toggleCidadeAlerta,
   toggleMostrarChave
 };
 
@@ -111,6 +114,70 @@ function carregarInputsConfiguracoes() {
   if (keyEl) keyEl.value = state.config.supabaseKey || '';
   if (geminiEl) geminiEl.value = state.config.geminiKey || '';
   if (braveEl) braveEl.value = state.config.braveKey || '';
+
+  renderizarChipsCidadesAlerta();
+}
+
+function renderizarChipsCidadesAlerta() {
+  const container = document.getElementById('alertCitiesContainer');
+  if (!container) return;
+
+  const todasCidades = Object.keys(PORTAIS_CIDADES);
+  const selecionadas = state.config.cidadesAlertas || [];
+
+  container.innerHTML = todasCidades.map(cid => {
+    const isAtivo = selecionadas.includes(cid);
+    return `
+      <span class="alert-city-chip ${isAtivo ? 'active' : ''}" onclick="window.radarActions.toggleCidadeAlerta('${cid}')">
+        ${isAtivo ? '✓ ' : '+ '}${cid}
+      </span>
+    `;
+  }).join('');
+}
+
+function toggleCidadeAlerta(cidade) {
+  if (!state.config.cidadesAlertas) state.config.cidadesAlertas = [];
+  const idx = state.config.cidadesAlertas.indexOf(cidade);
+  if (idx > -1) {
+    state.config.cidadesAlertas.splice(idx, 1);
+    mostrarToast(`Alertas desativados para ${cidade}.`);
+  } else {
+    state.config.cidadesAlertas.push(cidade);
+    mostrarToast(`Alertas ativados para ${cidade}!`, 'success');
+  }
+  salvarLocal();
+  renderizarChipsCidadesAlerta();
+}
+
+async function testarNotificacaoNativa() {
+  if (!('Notification' in window)) {
+    mostrarToast('Este navegador não suporta notificações nativas.', 'error');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    await ativarNotificacoes();
+    return;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const cidades = state.config.cidadesAlertas || [];
+    const cidadeExemplo = cidades[0] || 'Catanduva';
+
+    reg.showNotification(`Radar de Concursos: ${cidadeExemplo}`, {
+      body: `Novo edital oficial publicado! Inscrições abertas e retificações apuradas.`,
+      icon: './favicon.png',
+      badge: './favicon.png',
+      vibrate: [120, 60, 120],
+      tag: 'radar-teste-alerta',
+      data: { url: './index.html' }
+    });
+    mostrarToast('Notificação enviada com sucesso!', 'success');
+  } catch (e) {
+    console.warn('[Notificação Teste]', e);
+    mostrarToast('Erro ao disparar notificação.', 'error');
+  }
 }
 
 // ================= BOTÃO VOLTAR DO ANDROID (POPSTATE) =================
