@@ -14,7 +14,8 @@ import {
   toggleAcompanhar, 
   abrirModalPlano, 
   copiarPlanoEstudo,
-  toggleTopicoEstudo
+  toggleTopicoEstudo,
+  compartilharConcurso
 } from './radar.js';
 import { 
   renderizarMunicipios, 
@@ -39,6 +40,7 @@ window.radarActions = {
   abrirModalPlano,
   copiarPlanoEstudo,
   toggleTopicoEstudo,
+  compartilharConcurso,
   abrirModalPortais,
   abrirModalConsultaAvulsa,
   executarConsultaAvulsaLive,

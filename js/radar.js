@@ -95,6 +95,48 @@ export function renderizarRadar() {
   refreshIcons();
 }
 
+export function calcularEtapaConcurso(status, fase, texto) {
+  const t = `${status || ''} ${fase || ''} ${texto || ''}`.toLowerCase();
+  if (t.includes('convoca') || t.includes('nomea') || t.includes('formação') || t.includes('vigente') || t.includes('posse')) return 5;
+  if (t.includes('recurso') || t.includes('gabarito') || t.includes('classifica') || t.includes('resultado') || t.includes('homologa')) return 4;
+  if (t.includes('prova aplicada') || t.includes('provas aplicadas') || t.includes('provas realizadas') || t.includes('dia da prova')) return 3;
+  if ((status || '').toLowerCase().includes('aberto') || t.includes('inscrições abertas') || t.includes('inscrição aberta')) return 2;
+  return 1;
+}
+
+export function renderTimelineStepper(c) {
+  const step = calcularEtapaConcurso(c.status, c.fase_detalhada, `${c.titulo} ${c.prazo_inscricao} ${c.resumo_ia}`);
+  
+  return `
+    <div class="timeline-stepper" title="Etapa Oficial do Concurso">
+      <div class="step-node ${step >= 1 ? 'done' : ''} ${step === 1 ? 'current' : ''}">
+        <span class="step-dot"></span>
+        <span class="step-label">Edital</span>
+      </div>
+      <div class="step-line ${step >= 2 ? 'done' : ''}"></div>
+      <div class="step-node ${step >= 2 ? 'done' : ''} ${step === 2 ? 'current' : ''}">
+        <span class="step-dot"></span>
+        <span class="step-label">Inscrições</span>
+      </div>
+      <div class="step-line ${step >= 3 ? 'done' : ''}"></div>
+      <div class="step-node ${step >= 3 ? 'done' : ''} ${step === 3 ? 'current' : ''}">
+        <span class="step-dot"></span>
+        <span class="step-label">Provas</span>
+      </div>
+      <div class="step-line ${step >= 4 ? 'done' : ''}"></div>
+      <div class="step-node ${step >= 4 ? 'done' : ''} ${step === 4 ? 'current' : ''}">
+        <span class="step-dot"></span>
+        <span class="step-label">Recursos</span>
+      </div>
+      <div class="step-line ${step >= 5 ? 'done' : ''}"></div>
+      <div class="step-node ${step >= 5 ? 'done' : ''} ${step === 5 ? 'current' : ''}">
+        <span class="step-dot"></span>
+        <span class="step-label">Convocações</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderizarListaCards(itens, isAbaAcompanhados = false) {
   if (itens.length === 0) {
     return `
@@ -203,6 +245,9 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
           </div>
         </div>
 
+        <!-- Linha 3.5: Linha do Tempo das Etapas Oficiais -->
+        ${renderTimelineStepper(c)}
+
         ${c.resumo_ia ? `
           <div class="ai-summary-box">
             <div class="ai-summary-tag">
@@ -222,7 +267,11 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
           ${linkOficialBtn}
           <button class="btn-card-action study" onclick="window.radarActions.abrirModalPlano('${escapeHtml(c.id)}')">
             <i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i>
-            <span>Gerar Plano de Estudos</span>
+            <span>Plano de Estudos</span>
+          </button>
+          <button class="btn-card-action share" onclick="window.radarActions.compartilharConcurso('${escapeHtml(c.id)}')">
+            <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+            <span>Compartilhar</span>
           </button>
         </div>
       </div>
@@ -490,5 +539,49 @@ export function copiarPlanoEstudo() {
   }).catch(() => {
     mostrarToast('Plano gerado com sucesso!', 'info');
   });
+}
+
+export async function compartilharConcurso(id) {
+  const c = state.concursos.find(item => item.id === id);
+  if (!c) return;
+
+  const bancaTexto = c.banca ? `🏛️ Banca: ${c.banca}\n` : '';
+  const prazoTexto = c.prazo_inscricao ? `📅 Período: ${c.prazo_inscricao}\n` : '';
+  const vencTexto = c.salario_resumo ? `💰 Vencimento: ${c.salario_resumo}\n` : '';
+  const cargosTexto = (c.cargos || []).length > 0 ? `🎯 Cargos: ${(c.cargos || []).join(', ')}\n` : '';
+  const linkTexto = c.link_oficial ? `🔗 Link Oficial: ${c.link_oficial}\n` : '';
+
+  const texto = `📢 [RADAR DE CONCURSOS SP]\n\n` +
+    `📍 ${c.cidade} - ${c.titulo}\n` +
+    `📊 Status: ${c.status} (${c.confianca_score || 90}% Verificado Oficial)\n` +
+    bancaTexto +
+    cargosTexto +
+    vencTexto +
+    prazoTexto +
+    linkTexto +
+    `\nAcesse no Radar de Concursos SP: https://devmalone.github.io/radar-concursos/`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `${c.cidade}: ${c.titulo}`,
+        text: texto,
+        url: c.link_oficial || window.location.href
+      });
+      mostrarToast('Compartilhado com sucesso!', 'success');
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('[Share]', err);
+      }
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(texto);
+    mostrarToast('Informações copiadas para enviar no WhatsApp!', 'success');
+  } catch (e) {
+    mostrarToast('Não foi possível compartilhar.', 'error');
+  }
 }
 
