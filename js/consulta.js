@@ -126,7 +126,41 @@ async function executarFastPath(cidade, cargo) {
   setModoConsulta('deep');
 }
 
-// 2. DEEP PATH: Varredura investigativa na web com Gemini 3.6 Flash + Google Search Grounding
+// Consulta em tempo real à API da Brave Search (Multi-Engine)
+export async function consultarBraveSearch(query, apiKey) {
+  if (!apiKey || !query) return [];
+
+  try {
+    const endpoint = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pm&country=BR&search_lang=pt`;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Subscription-Token': apiKey
+      }
+    });
+
+    if (!response.ok) {
+      console.warn('[Brave Search] Status:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const results = data?.web?.results || [];
+
+    return results.map(r => ({
+      title: r.title || '',
+      url: r.url || '',
+      description: r.description || '',
+      age: r.page_age || ''
+    }));
+  } catch (err) {
+    console.warn('[Brave Search Error]', err);
+    return [];
+  }
+}
+
+// 2. DEEP PATH: Varredura investigativa na web com Gemini 3.6 Flash + Multi-Engine Grounding
 async function executarDeepPath(cidade, cargo) {
   const apiKey = state.config.geminiKey;
   if (!apiKey) {
@@ -143,6 +177,24 @@ async function executarDeepPath(cidade, cargo) {
   const hojeStr = dataAtual.toLocaleDateString('pt-BR');
   const anoAtual = dataAtual.getFullYear();
 
+  // Multi-Engine: Executa busca primária na Brave Search se houver chave configurada
+  let evidenciasBraveTexto = '';
+  const braveKey = state.config.braveKey;
+
+  if (braveKey) {
+    try {
+      const qBrave = `concurso publico prefeitura ${cidade} SP ${cargo || '2026'}`;
+      const snippetsBrave = await consultarBraveSearch(qBrave, braveKey);
+      if (snippetsBrave.length > 0) {
+        evidenciasBraveTexto = `\nEVIDÊNCIAS COLETADAS EM TEMPO REAL VIA BRAVE SEARCH (Recência últimos 30 dias):\n` +
+          snippetsBrave.map((s, idx) => `[Fonte ${idx + 1}] ${s.title}\nLink: ${s.url}\nResumo: ${s.description}`).join('\n\n') +
+          '\n\nUtilize prioritariamente as informações e links oficiais confirmados acima.';
+      }
+    } catch (e) {
+      console.warn('[Multi-Engine Brave]', e);
+    }
+  }
+
   const portaisConhecidos = PORTAIS_CIDADES[cidade];
   const contextoPortal = portaisConhecidos 
     ? `Portais oficiais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}`
@@ -158,6 +210,7 @@ Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Seguranç
 
 ${contextoPortal}
 Bancas Oficiais Reconhecidas no Estado de SP: ${bancasTexto}.
+${evidenciasBraveTexto}
 
 DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
 

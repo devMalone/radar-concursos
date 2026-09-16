@@ -13,7 +13,8 @@ import {
   renderizarRadar, 
   toggleAcompanhar, 
   abrirModalPlano, 
-  copiarPlanoEstudo 
+  copiarPlanoEstudo,
+  toggleTopicoEstudo
 } from './radar.js';
 import { 
   renderizarMunicipios, 
@@ -37,6 +38,7 @@ window.radarActions = {
   toggleAcompanhar,
   abrirModalPlano,
   copiarPlanoEstudo,
+  toggleTopicoEstudo,
   abrirModalPortais,
   abrirModalConsultaAvulsa,
   executarConsultaAvulsaLive,
