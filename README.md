@@ -31,9 +31,9 @@ No repositório `devMalone/radar-concursos` no GitHub:
 
 | Nome do Secret | Valor |
 |----------------|-------|
-| `GEMINI_API_KEY` | `AQ.Ab8RN6IZjgrC1I-xoRogm2MEYerM6EOJyEMs4CB-HWnI70zvdw` |
-| `SUPABASE_URL` | `https://vbnzvyxhfnsmbmgxahvn.supabase.co` |
-| `SUPABASE_KEY` | *Sua anon public key ou service_role key do Supabase* |
+| `GEMINI_API_KEY` | *Cole a sua chave gerada no Google AI Studio* |
+| `SUPABASE_URL` | *Cole a Project URL do seu projeto Supabase* |
+| `SUPABASE_KEY` | *Cole a sua Anon Public Key do Supabase* |
 
 ---
 
