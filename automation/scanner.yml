@@ -1,0 +1,28 @@
+name: Radar de Concursos Scanner
+
+on:
+  schedule:
+    # Roda todos os dias às 08:00 e às 18:00 (Horário de Brasília: UTC-3)
+    - cron: '0 11,21 * * *'
+  workflow_dispatch: # Permite disparar manualmente com 1 clique no GitHub!
+
+jobs:
+  scan-concursos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Executar Scanner Inteligente
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python scanner.py

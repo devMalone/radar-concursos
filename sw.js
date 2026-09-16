@@ -1,10 +1,21 @@
-// Service Worker — Radar de Concursos PWA
-const CACHE_NAME = 'radar-concursos-v2';
+// Service Worker — Radar de Concursos PWA (Padrão Casa do Sagrado v3)
+const CACHE_NAME = 'radar-concursos-v3';
+
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './favicon.png'
+  './favicon.png',
+  './css/base.css',
+  './css/components.css',
+  './css/modals.css',
+  './js/state.js',
+  './js/utils.js',
+  './js/portais.js',
+  './js/radar.js',
+  './js/consulta.js',
+  './js/supabase.js',
+  './js/app.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -27,27 +38,35 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // Network-First para HTML e chamadas de API
-  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+  // Network-First para HTML, CSS e JS (garante atualizações imediatas em produção)
+  if (
+    e.request.mode === 'navigate' || 
+    url.pathname.endsWith('.html') || 
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css')
+  ) {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          if (res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          }
           return res;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
     );
     return;
   }
 
-  // Cache-First para estáticos
+  // Cache-First para fontes e imagens
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
   );
 });
 
-// Recepção de Web Push (Notificação na barra do celular!)
+// Recepção de Web Push Nativo (Notificação na barra do celular)
 self.addEventListener('push', (e) => {
   let data = {
     title: 'Radar de Concursos SP',
@@ -72,7 +91,7 @@ self.addEventListener('push', (e) => {
       url: data.url || './index.html'
     },
     actions: [
-      { action: 'open', title: 'Ver Concurso' }
+      { action: 'open', title: 'Ver Detalhes' }
     ]
   };
 

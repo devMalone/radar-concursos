@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#080c14">
+  <meta name="theme-color" content="#0b0f17">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Monitor autônomo de concursos públicos, processos seletivos e licitações de bancas para São José do Rio Preto, Catanduva e região.">
+  <meta name="description" content="Monitor inteligente de concursos públicos, processos seletivos e licitações de bancas para Rio Preto, Catanduva e região noroeste paulista.">
   
   <title>Radar de Concursos SP</title>
   
@@ -17,1041 +17,77 @@
   <!-- Fontes & Lucide Icons & Supabase JS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <style>
-    :root {
-      /* Dev Web Standards — Tema Escuro Profundo */
-      --bg-primary: #080c14;
-      --bg-surface: #0f172a;
-      --bg-surface-elevated: #152238;
-      --bg-input: #0a111e;
-      
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
-      --border-focus: #3b82f6;
-      
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      
-      --accent-blue: #2563eb;
-      --accent-blue-rgb: 37, 99, 235;
-      --accent-gold: #c5a059;
-      --accent-gold-soft: rgba(197, 160, 89, 0.14);
-      --accent-gold-border: rgba(197, 160, 89, 0.35);
-      
-      --status-open: #10b981;
-      --status-open-bg: rgba(16, 185, 129, 0.12);
-      --status-open-border: rgba(16, 185, 129, 0.28);
-      
-      --status-licit: #f59e0b;
-      --status-licit-bg: rgba(245, 158, 11, 0.12);
-      --status-licit-border: rgba(245, 158, 11, 0.32);
-      
-      --status-prev: #38bdf8;
-      --status-prev-bg: rgba(56, 189, 248, 0.12);
-      --status-prev-border: rgba(56, 189, 248, 0.28);
-      
-      --status-canc: #f43f5e;
-      --status-canc-bg: rgba(244, 63, 94, 0.12);
-      --status-canc-border: rgba(244, 63, 94, 0.28);
-      
-      --status-andamento: #818cf8;
-      --status-andamento-bg: rgba(99, 102, 241, 0.14);
-      --status-andamento-border: rgba(99, 102, 241, 0.35);
-
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --radius-xl: 20px;
-      --radius-full: 9999px;
-
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
-      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
-      --shadow-glow: 0 0 24px rgba(37, 99, 235, 0.2);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      line-height: 1.5;
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: calc(88px + env(safe-area-inset-bottom, 20px));
-      -webkit-font-smoothing: antialiased;
-    }
-
-    body.modal-open {
-      overflow: hidden;
-      touch-action: none;
-      position: fixed;
-      width: 100%;
-    }
-
-    /* Regra Mobile iOS: inputs nunca menores que 16px */
-    input, select, textarea {
-      font-size: 16px !important;
-      font-family: inherit;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 0 16px;
-    }
-
-    /* Header Técnico */
-    header {
-      background: rgba(11, 18, 32, 0.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border-subtle);
-      position: sticky;
-      top: 0;
-      z-index: 40;
-      padding: 12px 0;
-    }
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .radar-icon-wrap {
-      position: relative;
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #131d31, #0a1120);
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #60a5fa;
-      box-shadow: 0 0 14px rgba(37, 99, 235, 0.25);
-    }
-
-    .radar-ping {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border-radius: var(--radius-md);
-      border: 1.5px solid #3b82f6;
-      animation: radarPulse 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-      opacity: 0.5;
-    }
-
-    @keyframes radarPulse {
-      0% { transform: scale(1); opacity: 0.7; }
-      80%, 100% { transform: scale(1.4); opacity: 0; }
-    }
-
-    .brand-title {
-      font-size: 1.08rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .brand-tag {
-      font-size: 0.65rem;
-      font-weight: 700;
-      background: rgba(37, 99, 235, 0.16);
-      color: #93c5fd;
-      padding: 2px 7px;
-      border-radius: var(--radius-full);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      letter-spacing: 0.05em;
-    }
-
-    .brand-sub {
-      font-size: 0.74rem;
-      color: var(--text-muted);
-      letter-spacing: -0.01em;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn-header-action {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      padding: 8px 14px;
-      border-radius: var(--radius-md);
-      font-size: 0.8rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-header-action:hover {
-      background: var(--bg-surface-elevated);
-      border-color: var(--border-focus);
-    }
-
-    .btn-header-action.primary {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #ffffff;
-    }
-
-    .btn-header-action.primary:hover {
-      background: #1d4ed8;
-    }
-
-    .icon-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: var(--radius-md);
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .icon-btn:hover {
-      color: var(--text-main);
-      border-color: var(--border-strong);
-      background: var(--bg-surface-elevated);
-    }
-
-    .icon-btn.active {
-      color: #60a5fa;
-      border-color: rgba(59, 130, 246, 0.5);
-      background: rgba(37, 99, 235, 0.15);
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin: 20px 0 16px 0;
-    }
-
-    @media (max-width: 640px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    .stat-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-    }
-
-    .stat-card.all::before { background: var(--accent-blue); }
-    .stat-card.open::before { background: var(--status-open); }
-    .stat-card.licit::before { background: var(--status-licit); }
-    .stat-card.track::before { background: var(--accent-gold); }
-
-    .stat-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .stat-val {
-      font-size: 1.45rem;
-      font-weight: 800;
-      color: var(--text-main);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Filter & Search Panel */
-    .filter-panel {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 14px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .search-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .search-box {
-      flex: 1;
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .search-box i {
-      position: absolute;
-      left: 14px;
-      color: var(--text-dim);
-      pointer-events: none;
-    }
-
-    .search-box input {
-      width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 12px 14px 12px 42px;
-      color: var(--text-main);
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .search-box input:focus {
-      border-color: var(--border-focus);
-    }
-
-    .select-city {
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 0 14px;
-      color: var(--text-main);
-      outline: none;
-      min-width: 180px;
-      cursor: pointer;
-    }
-
-    @media (max-width: 640px) {
-      .search-row {
-        flex-direction: column;
-      }
-      .select-city {
-        height: 48px;
-      }
-    }
-
-    .tabs-row {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-    }
-    .tabs-row::-webkit-scrollbar { display: none; }
-
-    .tab-btn {
-      background: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      border-radius: var(--radius-full);
-      padding: 7px 15px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      white-space: nowrap;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.15s ease;
-    }
-
-    .tab-btn:hover {
-      color: var(--text-main);
-      border-color: var(--border-strong);
-    }
-
-    .tab-btn.active {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #ffffff;
-      box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
-    }
-
-    /* Cards de Concurso */
-    .concursos-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .concurso-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .concurso-card:hover {
-      border-color: rgba(59, 130, 246, 0.35);
-      box-shadow: var(--shadow-md);
-    }
-
-    /* Linha 1: Brasão + Cidade + Status + Acompanhar */
-    .card-row-1 {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .city-crest-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .municipal-crest-svg {
-      width: 32px;
-      height: 32px;
-      flex-shrink: 0;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-    }
-
-    .city-name-label {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: #93c5fd;
-      letter-spacing: -0.01em;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: var(--radius-full);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .status-badge.status-aberto {
-      background: var(--status-open-bg);
-      color: var(--status-open);
-      border: 1px solid var(--status-open-border);
-    }
-
-    .status-badge.status-licit {
-      background: var(--status-licit-bg);
-      color: var(--status-licit);
-      border: 1px solid var(--status-licit-border);
-    }
-
-    .status-badge.status-prev {
-      background: var(--status-prev-bg);
-      color: var(--status-prev);
-      border: 1px solid var(--status-prev-border);
-    }
-
-    .status-badge.status-canc {
-      background: var(--status-canc-bg);
-      color: var(--status-canc);
-      border: 1px solid var(--status-canc-border);
-    }
-
-    .status-badge.status-andamento {
-      background: var(--status-andamento-bg);
-      color: var(--status-andamento);
-      border: 1px solid var(--status-andamento-border);
-    }
-
-    .pulse-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: currentColor;
-    }
-
-    .btn-track {
-      background: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: var(--radius-md);
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .btn-track:hover {
-      border-color: var(--accent-gold);
-      color: var(--accent-gold);
-    }
-
-    .btn-track.active {
-      background: var(--accent-gold-soft);
-      border-color: var(--accent-gold-border);
-      color: #fde68a;
-    }
-
-    /* Linha 2: Título + Órgão + Cargos Tags */
-    .card-row-2 {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .concurso-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-main);
-      line-height: 1.35;
-      letter-spacing: -0.01em;
-    }
-
-    .concurso-orgao {
-      font-size: 0.84rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .cargos-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .cargo-chip {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-subtle);
-      color: #cbd5e1;
-      font-size: 0.74rem;
-      font-weight: 500;
-      padding: 3px 9px;
-      border-radius: var(--radius-sm);
-    }
-
-    .cargo-chip.highlight {
-      background: var(--accent-gold-soft);
-      border-color: var(--accent-gold-border);
-      color: #fde68a;
-      font-weight: 700;
-    }
-
-    /* Linha 3: Meta Grid + Análise IA */
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      background: var(--bg-input);
-      border-radius: var(--radius-md);
-      padding: 10px 14px;
-      border: 1px solid var(--border-subtle);
-    }
-
-    @media (max-width: 540px) {
-      .meta-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.79rem;
-      color: var(--text-muted);
-    }
-
-    .meta-item strong {
-      color: var(--text-main);
-    }
-
-    .ai-summary {
-      background: rgba(15, 23, 42, 0.75);
-      border-left: 3px solid var(--accent-blue);
-      padding: 10px 14px;
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-      font-size: 0.82rem;
-      color: #cbd5e1;
-      line-height: 1.5;
-    }
-
-    .ai-summary-header {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #93c5fd;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Linha 4: Ações */
-    .card-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      border-top: 1px solid var(--border-subtle);
-      padding-top: 12px;
-    }
-
-    .btn-action {
-      background: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      padding: 8px 14px;
-      border-radius: var(--radius-md);
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      text-decoration: none;
-      transition: all 0.15s;
-    }
-
-    .btn-action:hover {
-      background: #1e293b;
-      border-color: var(--border-strong);
-    }
-
-    .btn-action.btn-official {
-      background: rgba(37, 99, 235, 0.12);
-      border-color: rgba(59, 130, 246, 0.35);
-      color: #93c5fd;
-    }
-
-    .btn-action.btn-official:hover {
-      background: rgba(37, 99, 235, 0.22);
-      border-color: #60a5fa;
-    }
-
-    .btn-action.btn-study {
-      background: rgba(16, 185, 129, 0.12);
-      border-color: rgba(16, 185, 129, 0.32);
-      color: #34d399;
-    }
-
-    .btn-action.btn-study:hover {
-      background: rgba(16, 185, 129, 0.2);
-      border-color: #34d399;
-    }
-
-    /* Bottom-Sheet Modais Ergonomia */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 1000;
-      overscroll-behavior: contain;
-    }
-
-    .modal-backdrop.open {
-      display: flex;
-    }
-
-    .modal-box {
-      width: 100%;
-      max-width: 620px;
-      max-height: 88vh;
-      max-height: 88dvh;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-strong);
-      border-radius: 20px 20px 0 0;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
-      padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 20px));
-      animation: sheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes sheetUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    @media (min-width: 768px) {
-      .modal-backdrop {
-        align-items: center;
-        padding: 20px;
-      }
-      .modal-box {
-        border-radius: var(--radius-xl);
-        padding: 24px;
-      }
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: 16px;
-    }
-
-    .modal-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .modal-body {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-label {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .form-input {
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      color: var(--text-main);
-      outline: none;
-      width: 100%;
-    }
-
-    .form-input:focus {
-      border-color: var(--border-focus);
-    }
-
-    /* Modal Portais Oficiais Lista */
-    .portais-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .portal-item-link {
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text-main);
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .portal-item-link:hover {
-      background: var(--bg-surface-elevated);
-      border-color: var(--border-focus);
-    }
-
-    .portal-link-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .portal-link-title {
-      font-size: 0.86rem;
-      font-weight: 700;
-      color: #93c5fd;
-    }
-
-    .portal-link-desc {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    /* Modal Plano de Estudos Boxes */
-    .study-subject-box {
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .study-subject-title {
-      font-size: 0.86rem;
-      font-weight: 700;
-      color: #93c5fd;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .study-topics-list {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      padding-left: 18px;
-      line-height: 1.6;
-    }
-
-    /* Floating Action Bar (Thumb Zone) */
-    .floating-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(11, 18, 32, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border-subtle);
-      padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 12px));
-      z-index: 30;
-      display: flex;
-      justify-content: center;
-    }
-
-    .floating-bar-inner {
-      width: 100%;
-      max-width: 980px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .btn-avulso-main {
-      flex: 1;
-      background: #2563eb;
-      color: #ffffff;
-      border: none;
-      padding: 12px 18px;
-      border-radius: var(--radius-md);
-      font-size: 0.88rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-      transition: background 0.2s;
-    }
-
-    .btn-avulso-main:hover {
-      background: #1d4ed8;
-    }
-
-    /* Scanner Loading State */
-    .scan-loading-box {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 30px 20px;
-      text-align: center;
-    }
-
-    .scan-spinner {
-      width: 44px;
-      height: 44px;
-      border: 3px solid rgba(59, 130, 246, 0.2);
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Toast */
-    .toast-container {
-      position: fixed;
-      bottom: calc(75px + env(safe-area-inset-bottom, 20px));
-      right: 16px;
-      left: 16px;
-      max-width: 420px;
-      margin: 0 auto;
-      z-index: 2000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-
-    .toast {
-      background: #131d31;
-      color: #f8fafc;
-      border: 1px solid var(--border-strong);
-      padding: 12px 16px;
-      border-radius: var(--radius-md);
-      font-size: 0.84rem;
-      font-weight: 500;
-      box-shadow: var(--shadow-md);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideUpToast 0.22s ease-out;
-      pointer-events: auto;
-    }
-
-    @keyframes slideUpToast {
-      from { transform: translateY(16px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 48px 20px;
-      background: var(--bg-surface);
-      border: 1px dashed var(--border-subtle);
-      border-radius: var(--radius-lg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      color: var(--text-muted);
-    }
-  </style>
+  <!-- CSS Modular (Padrão Casa do Sagrado) -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modals.css">
 </head>
 <body>
 
-  <!-- Header Técnico -->
-  <header>
-    <div class="container header-content">
-      <a href="#" class="brand">
-        <div class="radar-icon-wrap">
-          <div class="radar-ping"></div>
-          <i data-lucide="radar" style="width: 22px; height: 22px;"></i>
-        </div>
-        <div>
-          <div class="brand-title">
-            Radar de Concursos
-            <span class="brand-tag">SP NOROESTE</span>
-          </div>
-          <div class="brand-sub">Rio Preto, Catanduva e Cidades Vizinhas</div>
-        </div>
-      </a>
-
-      <div class="header-actions">
-        <button class="btn-header-action primary" onclick="abrirModalConsultaAvulsa()">
-          <i data-lucide="search-code" style="width: 16px; height: 16px;"></i>
-          <span>Consulta Avulsa</span>
-        </button>
-        <button class="icon-btn" id="btnSync" onclick="sincronizarSupabaseComFeedback()" title="Sincronizar Banco">
-          <i data-lucide="refresh-cw" style="width: 17px; height: 17px;"></i>
-        </button>
-        <button class="icon-btn" id="btnNotify" onclick="ativarWebPush()" title="Notificações no Celular">
-          <i data-lucide="bell" style="width: 17px; height: 17px;"></i>
-        </button>
-        <button class="icon-btn" onclick="abrirModalConfig()" title="Configurações">
-          <i data-lucide="settings" style="width: 17px; height: 17px;"></i>
-        </button>
+  <!-- Top Bar Técnica e Fixa -->
+  <header class="top-bar">
+    <div class="brand-area">
+      <div class="radar-logo-icon">
+        <div class="radar-pulse-ring"></div>
+        <i data-lucide="radar" style="width: 18px; height: 18px;"></i>
       </div>
+      <div class="brand-wordmark">
+        <span class="brand-title">Radar de Concursos</span>
+        <span class="brand-tag">SP Noroeste • Rio Preto & Região</span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="install-pill-btn" id="btnInstalarApp" style="display: none;" title="Instalar Aplicativo">
+        <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+        <span>Instalar</span>
+      </button>
+
+      <button class="sync-action-btn" id="btnSyncTop" title="Sincronizar com Nuvem Supabase">
+        <span class="sync-indicator offline" id="syncIndicator"></span>
+        <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i>
+      </button>
     </div>
   </header>
 
-  <main class="container">
-    <!-- Métricas do Radar -->
-    <div class="stats-grid">
-      <div class="stat-card all">
-        <span class="stat-label">Concursos no Radar</span>
-        <span class="stat-val" id="statTotal">0</span>
+  <!-- Viewport Principal com Rolagem Nativa Restrita (Thumb Zone) -->
+  <main class="app-viewport">
+    
+    <!-- ABA 1: RADAR DE CONCURSOS (PRINCIPAL) -->
+    <section class="tab-view active" id="tab-radar">
+      <div class="search-box">
+        <i data-lucide="search" style="width: 17px; height: 17px; color: var(--text-dim); flex-shrink: 0;"></i>
+        <input type="text" id="inputBusca" placeholder="Pesquisar cargo, órgão, licitação, banca..." autocomplete="off">
       </div>
-      <div class="stat-card open">
-        <span class="stat-label">Editais Abertos</span>
-        <span class="stat-val" id="statAbertos" style="color: var(--status-open);">0</span>
-      </div>
-      <div class="stat-card licit">
-        <span class="stat-label">Licitações de Banca</span>
-        <span class="stat-val" id="statLicit" style="color: var(--status-licit);">0</span>
-      </div>
-      <div class="stat-card track">
-        <span class="stat-label">Acompanhando</span>
-        <span class="stat-val" id="statTrack" style="color: #fde68a;">0</span>
-      </div>
-    </div>
 
-    <!-- Filtros e Busca -->
-    <div class="filter-panel">
-      <div class="search-row">
-        <div class="search-box">
-          <i data-lucide="search" style="width: 18px; height: 18px;"></i>
-          <input type="text" id="inputBusca" placeholder="Filtrar por cargo, órgão, licitação, banca..." oninput="aplicarFiltros()">
+      <div class="pills-bar-wrapper">
+        <div class="pills-bar">
+          <button class="pill active" data-filter="todos">
+            <i data-lucide="layers" style="width: 13px; height: 13px;"></i> Todos
+          </button>
+          <button class="pill" data-filter="Edital Aberto">
+            <i data-lucide="file-check" style="width: 13px; height: 13px;"></i> Editais Abertos
+          </button>
+          <button class="pill" data-filter="Licitação">
+            <i data-lucide="briefcase" style="width: 13px; height: 13px;"></i> Licitações
+          </button>
+          <button class="pill" data-filter="Previsto">
+            <i data-lucide="clock" style="width: 13px; height: 13px;"></i> Previstos
+          </button>
+          <button class="pill" data-filter="andamento">
+            <i data-lucide="hourglass" style="width: 13px; height: 13px;"></i> Recursos / Gabarito
+          </button>
+          <button class="pill" data-filter="Cancelado">
+            <i data-lucide="alert-triangle" style="width: 13px; height: 13px;"></i> Cancelados
+          </button>
         </div>
-        <select class="select-city" id="selectCidade" onchange="aplicarFiltros()">
-          <option value="">Todas as Cidades</option>
+
+        <select class="pill-city-select" id="selectCidade">
+          <option value="">Todas as Cidades da Região</option>
           <option value="São José do Rio Preto">São José do Rio Preto</option>
           <option value="Catanduva">Catanduva</option>
           <option value="Mirassol">Mirassol</option>
@@ -1069,1158 +105,243 @@
         </select>
       </div>
 
-      <div class="tabs-row">
-        <button class="tab-btn active" data-filter="todos" onclick="setTabFiltro('todos')">
-          <i data-lucide="layers" style="width: 14px; height: 14px;"></i> Todos
-        </button>
-        <button class="tab-btn" data-filter="Edital Aberto" onclick="setTabFiltro('Edital Aberto')">
-          <i data-lucide="file-check" style="width: 14px; height: 14px;"></i> Editais Abertos
-        </button>
-        <button class="tab-btn" data-filter="Licitação" onclick="setTabFiltro('Licitação')">
-          <i data-lucide="briefcase" style="width: 14px; height: 14px;"></i> Licitação / Banca
-        </button>
-        <button class="tab-btn" data-filter="Previsto" onclick="setTabFiltro('Previsto')">
-          <i data-lucide="clock" style="width: 14px; height: 14px;"></i> Previstos
-        </button>
-        <button class="tab-btn" data-filter="andamento" onclick="setTabFiltro('andamento')">
-          <i data-lucide="hourglass" style="width: 14px; height: 14px;"></i> Em Andamento / Recursos
-        </button>
-        <button class="tab-btn" data-filter="Cancelado / Suspenso" onclick="setTabFiltro('Cancelado / Suspenso')">
-          <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Cancelados
-        </button>
-        <button class="tab-btn" data-filter="acompanhados" onclick="setTabFiltro('acompanhados')">
-          <i data-lucide="bookmark-check" style="width: 14px; height: 14px; color: var(--accent-gold);"></i> Acompanhados
-        </button>
-      </div>
-    </div>
+      <div class="concursos-grid" id="concursosList"></div>
+    </section>
 
-    <!-- Lista de Concursos -->
-    <div class="concursos-list" id="concursosList"></div>
+    <!-- ABA 2: ACOMPANHADOS -->
+    <section class="tab-view" id="tab-acompanhados">
+      <div style="margin-bottom: 14px;">
+        <h2 style="font-size: 16px; font-weight: 800; color: var(--text);">Certames Acompanhados</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+          Monitore as etapas, prazos de recursos, gabaritos e convocações dos seus concursos selecionados.
+        </p>
+      </div>
+
+      <div class="concursos-grid" id="acompanhadosList"></div>
+    </section>
+
+    <!-- ABA 3: GUIA OFICIAL DE MUNICÍPIOS -->
+    <section class="tab-view" id="tab-municipios">
+      <div style="margin-bottom: 14px;">
+        <h2 style="font-size: 16px; font-weight: 800; color: var(--text);">Portais Oficiais da Região</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+          Acesso direto às fontes primárias: prefeituras, diários oficiais e editais de licitação de bancas.
+        </p>
+      </div>
+
+      <div class="municipios-grid" id="municipiosList"></div>
+    </section>
+
+    <!-- ABA 4: CONFIGURAÇÕES & CONEXÕES -->
+    <section class="tab-view" id="tab-config">
+      <div style="margin-bottom: 16px;">
+        <h2 style="font-size: 16px; font-weight: 800; color: var(--text);">Ajustes & Conectividade</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+          Configurações de nuvem Supabase, Gemini 3.6 Flash e notificações no dispositivo.
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Card Nuvem Supabase -->
+        <div class="concurso-card">
+          <div class="card-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="database" style="width: 18px; height: 18px; color: #60a5fa;"></i>
+              <span style="font-weight: 700; font-size: 14px;">Conexão Supabase</span>
+            </div>
+            <span class="status-badge status-licit" style="font-size: 9.5px;">Nuvem</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgSupabaseUrl">URL do Projeto Supabase</label>
+            <input type="url" class="form-input" id="cfgSupabaseUrl" placeholder="https://vbnzvyxhfnsmbmgxahvn.supabase.co">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgSupabaseKey">Anon Public Key</label>
+            <input type="password" class="form-input" id="cfgSupabaseKey" placeholder="Cole a Anon Key do Supabase...">
+          </div>
+
+          <div class="card-actions-row" style="border: none; padding-top: 4px;">
+            <button class="btn-card-action primary" id="btnTestarConfig">
+              <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+              <span>Testar Conexão</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card Gemini AI -->
+        <div class="concurso-card">
+          <div class="card-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="sparkles" style="width: 18px; height: 18px; color: #f59e0b;"></i>
+              <span style="font-weight: 700; font-size: 14px;">IA Gemini 3.6 Flash</span>
+            </div>
+            <span class="status-badge status-aberto" style="font-size: 9.5px;">Google Search</span>
+          </div>
+
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Utilizada exclusivamente no seu aparelho para executar as consultas avulsas e extrações em tempo real. Nunca compartilhada publicamente.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgGeminiKey">Gemini API Key</label>
+            <input type="password" class="form-input" id="cfgGeminiKey" placeholder="Cole sua chave da Gemini API...">
+          </div>
+
+          <button class="btn-modal-main" id="btnSalvarConfig" style="margin-top: 4px;">
+            <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+            <span>Salvar Configurações</span>
+          </button>
+        </div>
+
+        <!-- Card Alertas Push -->
+        <div class="concurso-card">
+          <div class="card-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="bell" style="width: 18px; height: 18px; color: #34d399;"></i>
+              <span style="font-weight: 700; font-size: 14px;">Notificações no Celular</span>
+            </div>
+          </div>
+
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Receba notificações imediatas na barra do celular quando um novo edital for publicado ou licitação aberta.
+          </p>
+
+          <button class="btn-card-action study" onclick="window.radarActions.ativarNotificacoes()">
+            <i data-lucide="bell-ring" style="width: 15px; height: 15px;"></i>
+            <span>Ativar Alertas Nativos no Aparelho</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <!-- Barra Inferior Móvel (Zona do Polegar) -->
-  <div class="floating-bar">
-    <div class="floating-bar-inner">
-      <button class="btn-avulso-main" onclick="abrirModalConsultaAvulsa()">
-        <i data-lucide="search-code" style="width: 18px; height: 18px;"></i>
-        <span>Nova Consulta Avulsa</span>
-      </button>
-      <button class="icon-btn" style="height: 48px; width: 48px;" onclick="sincronizarSupabaseComFeedback()" title="Recarregar">
-        <i data-lucide="refresh-cw" style="width: 18px; height: 18px;"></i>
-      </button>
-    </div>
-  </div>
+  <!-- Floating Action Button (FAB) para Consulta Avulsa Instantânea -->
+  <button class="fab" id="fabConsulta" title="Disparar Consulta Avulsa">
+    <i data-lucide="sparkles" style="width: 22px; height: 22px;"></i>
+  </button>
+
+  <!-- Bottom Navigation Bar (Zona do Polegar - Mobile First) -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tab-radar">
+      <i data-lucide="radar"></i>
+      <span>Radar</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-acompanhados">
+      <span class="nav-badge-count" id="countAcompanhadosNav" style="display: none;">0</span>
+      <i data-lucide="bookmark-check"></i>
+      <span>Acompanhar</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-municipios">
+      <i data-lucide="building-2"></i>
+      <span>Municípios</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-config">
+      <i data-lucide="sliders"></i>
+      <span>Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- MODAIS (Bottom-Sheet Drawer) -->
 
   <!-- Modal: Consulta Avulsa -->
-  <div class="modal-backdrop" id="modalConsultaAvulsa">
-    <div class="modal-box">
+  <div class="modal-overlay" id="modalConsultaAvulsa">
+    <div class="modal-container">
       <div class="modal-header">
         <div class="modal-title">
-          <i data-lucide="search-code" style="color: #60a5fa;"></i>
-          Consulta Avulsa Instantânea
+          <i data-lucide="search-code" style="color: #60a5fa; width: 18px; height: 18px;"></i>
+          <span>Consulta Avulsa Instantânea</span>
         </div>
-        <button class="icon-btn" onclick="fecharModal('modalConsultaAvulsa')">
+        <button class="modal-close-btn" onclick="window.radarActions.fecharModalAtual()">
           <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
 
-      <div id="consultaForm">
-        <div class="modal-body">
-          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
-            Dispare uma varredura sob demanda na web com o <strong>Gemini 3.6 Flash</strong> para uma cidade ou cargo específico sem esperar a rotina automática.
-          </p>
+      <div class="modal-body" id="consultaForm">
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+          Dispare uma varredura com o <strong>Gemini 3.6 Flash</strong> conectada ao Google Search para buscar novidades e licitações recentes.
+        </p>
 
-          <div class="form-group">
-            <label class="form-label" for="avulsoCidade">Município de Interesse</label>
-            <input type="text" class="form-input" id="avulsoCidade" placeholder="Ex: Catanduva, Potirendaba, Rio Preto..." value="Catanduva">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="avulsoCargo">Cargo, Área ou Palavra-Chave</label>
-            <input type="text" class="form-input" id="avulsoCargo" placeholder="Ex: Assistente de Licitação, Fiscal, Administrativo, Geral..." value="Assistente de Licitação">
-          </div>
-
-          <button class="btn-avulso-main" style="width: 100%; margin-top: 6px;" onclick="executarConsultaAvulsaLive()">
-            <i data-lucide="radar" style="width: 18px; height: 18px;"></i>
-            <span>Iniciar Varredura Imediata</span>
-          </button>
+        <div class="form-group">
+          <label class="form-label" for="avulsoCidade">Município de Interesse</label>
+          <input type="text" class="form-input" id="avulsoCidade" placeholder="Ex: Catanduva, Potirendaba, Rio Preto..." value="Catanduva">
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="avulsoCargo">Cargo, Área ou Palavra-Chave</label>
+          <input type="text" class="form-input" id="avulsoCargo" placeholder="Ex: Assistente de Licitação, Agente de Trânsito..." value="Assistente de Licitação">
+        </div>
+
+        <button class="btn-modal-main" style="margin-top: 4px;" onclick="window.radarActions.executarConsultaAvulsaLive()">
+          <i data-lucide="radar" style="width: 16px; height: 16px;"></i>
+          <span>Iniciar Varredura Imediata</span>
+        </button>
       </div>
 
-      <!-- Spinner durante a consulta avulsa -->
       <div class="scan-loading-box" id="consultaLoading">
         <div class="scan-spinner"></div>
-        <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">Pesquisando Diários Oficiais & Portais...</div>
-        <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 320px;">
-          O Gemini 3.6 Flash com Google Search Grounding está consultando publicações recentes para sua busca.
+        <div style="font-weight: 700; color: #f8fafc; font-size: 14px;">Consultando Portais & Diários Oficiais...</div>
+        <p style="font-size: 12px; color: var(--text-muted); max-width: 300px;">
+          O Gemini 3.6 Flash com Google Search Grounding está apurando publicações recentes para o seu critério.
         </p>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Portais Oficiais do Município -->
-  <div class="modal-backdrop" id="modalPortais">
-    <div class="modal-box">
+  <!-- Modal: Portais Oficiais da Cidade -->
+  <div class="modal-overlay" id="modalPortais">
+    <div class="modal-container">
       <div class="modal-header">
         <div class="modal-title">
-          <i data-lucide="building-2" style="color: #60a5fa;"></i>
-          <span id="modalPortaisTitulo">Acessos Oficiais do Município</span>
+          <i data-lucide="landmark" style="color: #60a5fa; width: 18px; height: 18px;"></i>
+          <span id="modalPortaisTitulo">Portais Oficiais</span>
         </div>
-        <button class="icon-btn" onclick="fecharModal('modalPortais')">
+        <button class="modal-close-btn" onclick="window.radarActions.fecharModalAtual()">
           <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
-      <div class="modal-body">
-        <p style="font-size: 0.82rem; color: var(--text-muted);">
-          Acesse diretamente as fontes originais e oficiais para conferir o edital na íntegra, publicações no Diário Oficial e atas de licitação.
-        </p>
-        <div class="portais-list" id="modalPortaisLista"></div>
-      </div>
+
+      <div class="modal-body" id="modalPortaisLista"></div>
     </div>
   </div>
 
-  <!-- Modal: Plano de Estudos Inteligente -->
-  <div class="modal-backdrop" id="modalPlanoEstudo">
-    <div class="modal-box">
+  <!-- Modal: Plano Estruturado de Estudos -->
+  <div class="modal-overlay" id="modalPlanoEstudo">
+    <div class="modal-container">
       <div class="modal-header">
         <div class="modal-title">
-          <i data-lucide="graduation-cap" style="color: #34d399;"></i>
-          <span id="modalPlanoTitulo">Plano Estruturado de Estudos</span>
+          <i data-lucide="graduation-cap" style="color: #34d399; width: 18px; height: 18px;"></i>
+          <span id="modalPlanoTitulo">Plano de Estudos</span>
         </div>
-        <button class="icon-btn" onclick="fecharModal('modalPlanoEstudo')">
+        <button class="modal-close-btn" onclick="window.radarActions.fecharModalAtual()">
           <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
+
       <div class="modal-body" id="modalPlanoBody"></div>
-      <div style="display: flex; gap: 10px; margin-top: 16px; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
-        <button class="btn-action" style="flex: 1;" onclick="copiarPlanoEstudo()">
-          <i data-lucide="copy" style="width: 15px; height: 15px;"></i> Copiar Matérias
+
+      <div class="modal-footer">
+        <button class="btn-card-action" style="flex: 1; justify-content: center;" onclick="window.radarActions.copiarPlanoEstudo()">
+          <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+          <span>Copiar Matérias</span>
         </button>
-        <button class="btn-action btn-study" onclick="fecharModal('modalPlanoEstudo')">
-          <i data-lucide="check" style="width: 15px; height: 15px;"></i> Concluir
+        <button class="btn-modal-main" style="flex: 1;" onclick="window.radarActions.fecharModalAtual()">
+          <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+          <span>Concluir</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Configurações & Nuvem -->
-  <div class="modal-backdrop" id="modalConfig">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">
-          <i data-lucide="database" style="color: #60a5fa;"></i>
-          Conexão Supabase & Chaves
-        </div>
-        <button class="icon-btn" onclick="fecharModal('modalConfig')">
-          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label" for="cfgSupabaseUrl">Supabase Project URL</label>
-          <input type="url" class="form-input" id="cfgSupabaseUrl" value="https://vbnzvyxhfnsmbmgxahvn.supabase.co">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="cfgSupabaseKey">Anon Public Key</label>
-          <input type="password" class="form-input" id="cfgSupabaseKey" placeholder="Cole a Anon Key do Supabase...">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="cfgGeminiKey">Gemini API Key (Para Consulta Avulsa)</label>
-          <input type="password" class="form-input" id="cfgGeminiKey" placeholder="Cole sua Gemini API Key...">
-        </div>
-
-        <div style="display: flex; gap: 8px; margin-top: 8px;">
-          <button class="btn-action primary" style="flex: 1; background: #2563eb; color: #fff;" onclick="salvarConfiguracoes()">
-            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Salvar
-          </button>
-          <button class="btn-action" onclick="testarConexao()">
-            <i data-lucide="activity" style="width: 15px; height: 15px;"></i> Testar
-          </button>
-        </div>
-      </div>
-    </div>
+  <!-- Toast Notificação Mobile -->
+  <div class="toast" id="appToast">
+    <i data-lucide="info" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+    <span id="toastMsg">Notificação do sistema</span>
   </div>
 
-  <!-- Toast Container -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <script>
-    // --- CATÁLOGO DE MUNICÍPIOS & PORTAIS OFICIAIS ---
-    const PORTAIS_CIDADES = {
-      "São José do Rio Preto": {
-        site: "https://www.riopreto.sp.gov.br",
-        diario: "https://diariooficial.riopreto.sp.gov.br",
-        concursos: "https://www.riopreto.sp.gov.br/concursos",
-        licitacoes: "https://transparencia.riopreto.sp.gov.br"
-      },
-      "Catanduva": {
-        site: "https://www.catanduva.sp.gov.br",
-        diario: "https://www.catanduva.sp.gov.br/diario-oficial/",
-        concursos: "https://www.catanduva.sp.gov.br/concursos-e-processos-seletivos/",
-        licitacoes: "https://www.catanduva.sp.gov.br/licitacoes/"
-      },
-      "Mirassol": {
-        site: "https://www.mirassol.sp.gov.br",
-        diario: "https://www.mirassol.sp.gov.br/diario-oficial",
-        concursos: "https://www.mirassol.sp.gov.br/concursos",
-        licitacoes: "https://www.mirassol.sp.gov.br/licitacoes"
-      },
-      "Potirendaba": {
-        site: "https://www.potirendaba.sp.gov.br",
-        diario: "https://www.potirendaba.sp.gov.br/portal/diario-oficial",
-        concursos: "https://www.potirendaba.sp.gov.br/portal/servicos/202/concursos-publicos/",
-        licitacoes: "https://transparencia.potirendaba.sp.gov.br:879/comprasedital/"
-      },
-      "Cedral": {
-        site: "https://www.cedral.sp.gov.br",
-        diario: "https://www.cedral.sp.gov.br/diario-oficial",
-        concursos: "https://www.cedral.sp.gov.br/concursos",
-        licitacoes: "https://www.cedral.sp.gov.br/licitacoes"
-      },
-      "Bady Bassitt": {
-        site: "https://www.badybassitt.sp.gov.br",
-        diario: "https://www.badybassitt.sp.gov.br/diario-oficial",
-        concursos: "https://www.badybassitt.sp.gov.br/concursos",
-        licitacoes: "https://www.badybassitt.sp.gov.br/licitacoes"
-      },
-      "Votuporanga": {
-        site: "https://www.votuporanga.sp.gov.br",
-        diario: "https://www.votuporanga.sp.gov.br/portal/diario-oficial",
-        concursos: "https://www.votuporanga.sp.gov.br/portal/concursos",
-        licitacoes: "https://www.votuporanga.sp.gov.br/portal/licitacoes"
-      },
-      "Olímpia": {
-        site: "https://www.olimpia.sp.gov.br",
-        diario: "https://www.olimpia.sp.gov.br/portal/diario-oficial",
-        concursos: "https://www.olimpia.sp.gov.br/portal/concursos",
-        licitacoes: "https://www.olimpia.sp.gov.br/portal/licitacoes"
-      },
-      "Barretos": {
-        site: "https://www.barretos.sp.gov.br",
-        diario: "https://www.barretos.sp.gov.br/diario-oficial",
-        concursos: "https://www.barretos.sp.gov.br/concursos",
-        licitacoes: "https://www.barretos.sp.gov.br/licitacoes"
-      },
-      "Bebedouro": {
-        site: "https://www.bebedouro.sp.gov.br",
-        diario: "https://www.bebedouro.sp.gov.br/diario-oficial",
-        concursos: "https://www.bebedouro.sp.gov.br/concursos",
-        licitacoes: "https://www.bebedouro.sp.gov.br/licitacoes"
-      },
-      "Tanabi": {
-        site: "https://www.tanabi.sp.gov.br",
-        diario: "https://www.tanabi.sp.gov.br/diario-oficial",
-        concursos: "https://www.tanabi.sp.gov.br/concursos",
-        licitacoes: "https://www.tanabi.sp.gov.br/licitacoes"
-      },
-      "Monte Aprazível": {
-        site: "https://www.monteaprazivel.sp.gov.br",
-        diario: "https://www.monteaprazivel.sp.gov.br/diario-oficial",
-        concursos: "https://www.monteaprazivel.sp.gov.br/concursos",
-        licitacoes: "https://www.monteaprazivel.sp.gov.br/licitacoes"
-      },
-      "Fernandópolis": {
-        site: "https://www.fernandopolis.sp.gov.br",
-        diario: "https://www.fernandopolis.sp.gov.br/diario-oficial",
-        concursos: "https://www.fernandopolis.sp.gov.br/concursos",
-        licitacoes: "https://www.fernandopolis.sp.gov.br/licitacoes"
-      },
-      "José Bonifácio": {
-        site: "https://www.josebonifacio.sp.gov.br",
-        diario: "https://www.josebonifacio.sp.gov.br/diario-oficial",
-        concursos: "https://www.josebonifacio.sp.gov.br/concursos",
-        licitacoes: "https://www.josebonifacio.sp.gov.br/licitacoes"
-      }
-    };
-
-    // --- GERADOR DE BRASÃO VETORIAL SVG POR MUNICÍPIO (SEM EMOJIS, DESIGN PROFISSIONAL) ---
-    function gerarSvgBrasao(cidade) {
-      const c = cidade || "";
-      let corFundo = "#1e3a8a";
-      let corDetalhe = "#3b82f6";
-      let corOuro = "#f59e0b";
-      let simboloPath = `<path d="M16 10 L20 18 L12 18 Z" fill="${corOuro}"/>`;
-
-      if (c.includes("Rio Preto")) {
-        corFundo = "#1d4ed8";
-        corDetalhe = "#60a5fa";
-        // Cruz e Rios de Rio Preto
-        simboloPath = `
-          <path d="M16 9 V23 M9 16 H23" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M10 21 Q16 19 22 21" stroke="${corOuro}" stroke-width="1.8" fill="none"/>
-        `;
-      } else if (c.includes("Catanduva")) {
-        corFundo = "#047857";
-        corDetalhe = "#dc2626";
-        // Engrenagem e Ramos
-        simboloPath = `
-          <circle cx="16" cy="16" r="4.5" fill="none" stroke="${corOuro}" stroke-width="2"/>
-          <path d="M16 9 V11 M16 21 V23 M9 16 H11 M21 16 H23" stroke="${corOuro}" stroke-width="2" stroke-linecap="round"/>
-        `;
-      } else if (c.includes("Mirassol")) {
-        corFundo = "#b45309";
-        corDetalhe = "#2563eb";
-        // Sol de Mirassol
-        simboloPath = `
-          <circle cx="16" cy="16" r="4" fill="${corOuro}"/>
-          <path d="M16 8 V10 M16 22 V24 M8 16 H10 M22 16 H24 M10.5 10.5 L12 12 M20 20 L21.5 21.5 M10.5 21.5 L12 20 M20 12 L21.5 10.5" stroke="${corOuro}" stroke-width="1.5"/>
-        `;
-      } else if (c.includes("Potirendaba")) {
-        corFundo = "#15803d";
-        corDetalhe = "#0284c7";
-        // Campos e Coroa
-        simboloPath = `
-          <path d="M10 20 L16 12 L22 20 Z" fill="${corOuro}" opacity="0.9"/>
-          <circle cx="16" cy="11" r="1.8" fill="#ffffff"/>
-        `;
-      } else if (c.includes("Cedral")) {
-        corFundo = "#065f46";
-        corDetalhe = "#d97706";
-        // Pinheiro / Cedro
-        simboloPath = `
-          <path d="M16 9 L20 15 H17 L21 21 H11 L15 15 H12 Z" fill="#ffffff"/>
-        `;
-      } else if (c.includes("Votuporanga")) {
-        corFundo = "#1e40af";
-        corDetalhe = "#d97706";
-        // Torre Municipal
-        simboloPath = `
-          <path d="M12 21 V13 H20 V21 Z" fill="${corOuro}"/>
-          <path d="M11 13 L16 8 L21 13 Z" fill="#ffffff"/>
-        `;
-      } else if (c.includes("Olímpia")) {
-        corFundo = "#0369a1";
-        corDetalhe = "#15803d";
-        // Águas Termais
-        simboloPath = `
-          <path d="M10 17 Q16 13 22 17 M10 21 Q16 17 22 21" stroke="#ffffff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-        `;
-      } else {
-        corFundo = "#334155";
-        corDetalhe = "#64748b";
-        simboloPath = `
-          <path d="M16 10 L21 15 L16 20 L11 15 Z" fill="${corOuro}"/>
-        `;
-      }
-
-      return `
-        <svg class="municipal-crest-svg" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Escudo Heráldico Paulista Clássico -->
-          <path d="M6 5 C6 5 16 3 16 3 C16 3 26 5 26 5 V17 C26 23.5 16 29 16 29 C16 29 6 23.5 6 17 V5 Z" fill="${corFundo}" stroke="rgba(255,255,255,0.25)" stroke-width="1.2"/>
-          <path d="M8 7 C8 7 16 5 16 5 C16 5 24 7 24 7 V16.5 C24 22 16 26.8 16 26.8 C16 26.8 8 22 8 16.5 V7 Z" fill="${corDetalhe}" opacity="0.35"/>
-          <!-- Símbolo Distintivo -->
-          ${simboloPath}
-          <!-- Coroa Mural Prateada/Dourada Superior -->
-          <path d="M9 3 H23 V5 H21 V4 H19 V5 H17 V4 H15 V5 H13 V4 H11 V5 H9 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.6"/>
-        </svg>
-      `;
-    }
-
-    // --- DADOS INICIAIS ---
-    const DEFAULT_SUPABASE_URL = "https://vbnzvyxhfnsmbmgxahvn.supabase.co";
-    const DEFAULT_GEMINI_KEY = "";
-
-    const DADOS_LOCAIS = [
-      {
-        id: "catanduva_prefeitura_concurso_01",
-        cidade: "Catanduva",
-        orgao: "Prefeitura Municipal de Catanduva",
-        titulo: "Concurso Público — Diversos Cargos Administrativos e Saúde",
-        status: "Edital Aberto",
-        cargos: ["Assistente de Licitação", "Agente Administrativo", "Fiscal Tributário", "Enfermeiro", "Analista de TI"],
-        areas: ["Administrativo", "Licitações", "Saúde", "TI"],
-        salario_resumo: "R$ 2.850,00 a R$ 8.420,00",
-        prazo_inscricao: "Inscrições abertas no portal oficial da banca",
-        link_oficial: "https://www.catanduva.sp.gov.br/concursos-e-processos-seletivos/",
-        resumo_ia: "Edital publicado pela banca Vunesp. Excelente oportunidade para atuar na área de compras governamentais sob a égide da Lei 14.133/21.",
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: "potirendaba_concurso_001_2026",
-        cidade: "Potirendaba",
-        orgao: "Prefeitura Municipal de Potirendaba",
-        titulo: "Concurso Público 001/2026 — Quadro Geral e Específico",
-        status: "Em Andamento (Recursos / Gabarito)",
-        cargos: ["Assistente de Licitação", "Agente Administrativo", "Secretário de Escola", "Agente de Trânsito", "Fiscal de Tributos"],
-        areas: ["Administrativo", "Licitações", "Educação", "Segurança"],
-        salario_resumo: "R$ 2.150,00 a R$ 5.400,00",
-        prazo_inscricao: "Inscrições encerradas • Provas aplicadas • Fase de Recursos e Gabaritos",
-        link_oficial: "https://www.potirendaba.sp.gov.br/portal/servicos/1053/concurso-publico-0012026/",
-        resumo_ia: "Certame organizado pelo Instituto Consulplan. As provas objetivas já foram aplicadas; certame atualmente na fase de divulgação de gabaritos preliminares e interposição de recursos dos candidatos.",
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: "sao_jose_do_rio_preto_guarda_civil",
-        cidade: "São José do Rio Preto",
-        orgao: "Prefeitura Municipal de São José do Rio Preto",
-        titulo: "Concurso Guarda Civil Municipal & Agente de Fiscalização",
-        status: "Previsto",
-        cargos: ["Guarda Civil Municipal", "Fiscal de Posturas", "Agente de Trânsito"],
-        areas: ["Segurança", "Fiscal"],
-        salario_resumo: "R$ 3.500,00 a R$ 5.800,00 + adicionais",
-        prazo_inscricao: "Comissão organizadora instituída em Diário Oficial",
-        link_oficial: "https://diariooficial.riopreto.sp.gov.br",
-        resumo_ia: "Publicação preliminar de autorização no Diário Oficial. Previsão de mais de 80 vagas imediatas e cadastro de reserva.",
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: "mirassol_saae_concurso",
-        cidade: "Mirassol",
-        orgao: "SAAE - Serviço Autônomo de Água e Esgoto de Mirassol",
-        titulo: "Concurso Público Autárquico — Quadro Operacional e Compras",
-        status: "Edital Aberto",
-        cargos: ["Comprador", "Agente Administrativo", "Operador de ETA", "Técnico Químico"],
-        areas: ["Administrativo", "Licitações", "Operacional"],
-        salario_resumo: "R$ 2.450,00 a R$ 5.120,00",
-        prazo_inscricao: "Inscrições vigentes até fim do mês",
-        link_oficial: "https://www.mirassol.sp.gov.br/concursos",
-        resumo_ia: "Concurso para cargos efetivos da autarquia municipal com prova objetiva prevista para os próximos 60 dias.",
-        updated_at: new Date().toISOString()
-      }
-    ];
-
-    // --- ESTADO DA APLICAÇÃO ---
-    let state = {
-      concursos: [],
-      acompanhados: JSON.parse(localStorage.getItem('radar_acompanhados') || '[]'),
-      filtroTexto: '',
-      filtroCidade: '',
-      filtroTab: 'todos',
-      supabase: null,
-      geminiKey: localStorage.getItem('radar_gemini_key') || DEFAULT_GEMINI_KEY
-    };
-
-    // --- ENGENHARIA DEFENSIVA & MOBILE (Dev Web Standards) ---
-    // Pilha de Modais integrada ao Botão Voltar do Android
-    const modalStack = [];
-
-    function abrirModal(id) {
-      if (modalStack.includes(id)) return;
-      modalStack.push(id);
-      history.pushState({ modal: id }, '');
-      const el = document.getElementById(id);
-      if (el) el.classList.add('open');
-      document.body.classList.add('modal-open');
-      lucide.createIcons();
-    }
-
-    function fecharModal(id, fromPopState = false) {
-      const idx = modalStack.indexOf(id);
-      if (idx !== -1) modalStack.splice(idx, 1);
-      const el = document.getElementById(id);
-      if (el) el.classList.remove('open');
-      if (modalStack.length === 0) {
-        document.body.classList.remove('modal-open');
-      }
-      if (!fromPopState) {
-        history.back();
-      }
-    }
-
-    // Interceptador do botão Voltar do sistema (Android Back Gesture)
-    let ultimoToqueSair = 0;
-    window.addEventListener('popstate', (e) => {
-      if (modalStack.length > 0) {
-        const topo = modalStack[modalStack.length - 1];
-        fecharModal(topo, true);
-      } else {
-        const agora = Date.now();
-        if (agora - ultimoToqueSair < 2200) {
-          // Permite sair
-        } else {
-          ultimoToqueSair = agora;
-          showToast('Toque novamente para sair do aplicativo', 'info');
-          history.pushState(null, '');
-        }
-      }
-    });
-
-    // TouchMove defense em modais
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-      backdrop.addEventListener('touchmove', (e) => {
-        if (!e.target.closest('.modal-box')) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-    });
-
-    // --- INICIALIZAÇÃO ---
-    window.addEventListener('DOMContentLoaded', async () => {
-      inicializarSupabase();
-      carregarCacheLocal();
-      verificarPermissaoPush();
-      lucide.createIcons();
-      await sincronizarSupabaseSilencioso();
-    });
-
-    function inicializarSupabase() {
-      const url = localStorage.getItem('radar_supabase_url') || DEFAULT_SUPABASE_URL;
-      const key = localStorage.getItem('radar_supabase_key') || '';
-      
-      document.getElementById('cfgSupabaseUrl').value = url;
-      document.getElementById('cfgSupabaseKey').value = key;
-      document.getElementById('cfgGeminiKey').value = state.geminiKey;
-
-      if (url && key && window.supabase) {
-        try {
-          state.supabase = window.supabase.createClient(url, key);
-        } catch(e) {
-          console.warn('[Supabase] Falha ao instanciar client:', e);
-        }
-      }
-    }
-
-    function carregarCacheLocal() {
-      const cache = localStorage.getItem('radar_concursos_cache');
-      if (cache) {
-        try {
-          state.concursos = JSON.parse(cache);
-        } catch(e) {
-          state.concursos = DADOS_LOCAIS;
-        }
-      } else {
-        state.concursos = DADOS_LOCAIS;
-      }
-      renderizarTudo();
-    }
-
-    // --- SINCRONIZAÇÃO NUVEM ---
-    async function sincronizarSupabaseSilencioso() {
-      if (!state.supabase) return;
-      try {
-        const { data, error } = await state.supabase
-          .from('concursos')
-          .select('*')
-          .order('updated_at', { ascending: false });
-
-        if (!error && data && data.length > 0) {
-          // Safe Merge defensivo
-          data.forEach(incoming => {
-            const idx = state.concursos.findIndex(c => c.id === incoming.id);
-            if (idx >= 0) {
-              state.concursos[idx] = { ...state.concursos[idx], ...incoming };
-            } else {
-              state.concursos.unshift(incoming);
-            }
-          });
-          localStorage.setItem('radar_concursos_cache', JSON.stringify(state.concursos));
-          renderizarTudo();
-        }
-      } catch(e) {
-        console.warn('Sync silencioso:', e);
-      }
-    }
-
-    async function sincronizarSupabaseComFeedback() {
-      const btn = document.getElementById('btnSync');
-      if (btn) btn.classList.add('active');
-
-      if (!state.supabase) {
-        showToast('Supabase não configurado. Exibindo dados em cache local.', 'info');
-        if (btn) btn.classList.remove('active');
-        return;
-      }
-
-      try {
-        const { data, error } = await state.supabase
-          .from('concursos')
-          .select('*')
-          .order('updated_at', { ascending: false });
-
-        if (error) {
-          showToast('Aviso ao sincronizar: ' + error.message, 'error');
-        } else if (data && data.length > 0) {
-          state.concursos = data;
-          localStorage.setItem('radar_concursos_cache', JSON.stringify(data));
-          renderizarTudo();
-          showToast('Dados sincronizados com o banco com sucesso!', 'success');
-        } else {
-          showToast('Tabela do Supabase conectada.', 'info');
-        }
-      } catch(err) {
-        showToast('Erro de conexão com o banco.', 'error');
-      }
-
-      if (btn) btn.classList.remove('active');
-    }
-
-    // --- FILTROS E BUSCA ---
-    function aplicarFiltros() {
-      state.filtroTexto = document.getElementById('inputBusca').value.trim().toLowerCase();
-      state.filtroCidade = document.getElementById('selectCidade').value;
-      renderizarTudo();
-    }
-
-    function setTabFiltro(tab) {
-      state.filtroTab = tab;
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-filter') === tab);
-      });
-      renderizarTudo();
-    }
-
-    function filtrarConcursos() {
-      return state.concursos.filter(c => {
-        if (state.filtroTexto) {
-          const termo = `${c.cidade} ${c.orgao} ${c.titulo} ${(c.cargos || []).join(' ')} ${(c.areas || []).join(' ')} ${c.resumo_ia}`.toLowerCase();
-          if (!termo.includes(state.filtroTexto)) return false;
-        }
-
-        if (state.filtroCidade && c.cidade !== state.filtroCidade) {
-          return false;
-        }
-
-        if (state.filtroTab === 'acompanhados') {
-          return state.acompanhados.includes(c.id);
-        } else if (state.filtroTab === 'andamento') {
-          const s = (c.status || '').toLowerCase();
-          return s.includes('andamento') || s.includes('recurso') || s.includes('resultado') || s.includes('gabarito') || s.includes('encerrad');
-        } else if (state.filtroTab !== 'todos') {
-          return (c.status || '').toLowerCase().includes((state.filtroTab || '').toLowerCase());
-        }
-
-        return true;
-      });
-    }
-
-    // --- RENDERIZAÇÃO ---
-    function renderizarTudo() {
-      renderizarMetricas();
-      renderizarLista();
-    }
-
-    function renderizarMetricas() {
-      const total = state.concursos.length;
-      const abertos = state.concursos.filter(c => (c.status || '').toLowerCase().includes('aberto')).length;
-      const licit = state.concursos.filter(c => (c.status || '').toLowerCase().includes('licita')).length;
-      const track = state.acompanhados.length;
-
-      document.getElementById('statTotal').innerText = total;
-      document.getElementById('statAbertos').innerText = abertos;
-      document.getElementById('statLicit').innerText = licit;
-      document.getElementById('statTrack').innerText = track;
-    }
-
-    function getStatusBadgeClass(status) {
-      const s = (status || '').toLowerCase();
-      if (s.includes('aberto')) return 'status-aberto';
-      if (s.includes('licita')) return 'status-licit';
-      if (s.includes('previsto')) return 'status-prev';
-      if (s.includes('canc') || s.includes('susp')) return 'status-canc';
-      if (s.includes('andamento') || s.includes('recurso') || s.includes('resultado') || s.includes('gabarito') || s.includes('encerrad')) return 'status-andamento';
-      return 'status-prev';
-    }
-
-    function renderizarLista() {
-      const listaEl = document.getElementById('concursosList');
-      const filtrados = filtrarConcursos();
-
-      if (filtrados.length === 0) {
-        listaEl.innerHTML = `
-          <div class="empty-state">
-            <i data-lucide="file-search" style="width: 44px; height: 44px; color: var(--text-dim);"></i>
-            <h3 style="color: var(--text-main); font-size: 1.05rem;">Nenhum registro encontrado</h3>
-            <p style="font-size: 0.84rem;">Tente ajustar os filtros ou execute uma Consulta Avulsa.</p>
-          </div>
-        `;
-        lucide.createIcons();
-        return;
-      }
-
-      listaEl.innerHTML = filtrados.map(c => {
-        const isTracking = state.acompanhados.includes(c.id);
-        const statusClass = getStatusBadgeClass(c.status);
-        const brasaoSvg = gerarSvgBrasao(c.cidade);
-
-        // Tags dos cargos destacando licitações e administrativo
-        const cargosHtml = (c.cargos || []).map(cargo => {
-          const isLicit = /licitaç|compras|contrato|pregoeiro|trânsito/i.test(cargo);
-          return `<span class="cargo-chip ${isLicit ? 'highlight' : ''}">${escapeHtml(cargo)}</span>`;
-        }).join('');
-
-        const linkOficialBtn = c.link_oficial ? `
-          <a href="${escapeHtml(c.link_oficial)}" target="_blank" rel="noopener noreferrer" class="btn-action">
-            <i data-lucide="file-text" style="width: 14px; height: 14px; color: #60a5fa;"></i> Edital / Banca
-          </a>
-        ` : '';
-
-        return `
-          <div class="concurso-card">
-            <!-- Linha 1: Brasão + Cidade + Status + Acompanhar -->
-            <div class="card-row-1">
-              <div class="city-crest-group">
-                ${brasaoSvg}
-                <div>
-                  <div class="city-name-label">${escapeHtml(c.cidade)}</div>
-                  <span class="status-badge ${statusClass}">
-                    <span class="pulse-dot"></span>
-                    ${escapeHtml(c.status)}
-                  </span>
-                </div>
-              </div>
-
-              <button class="btn-track ${isTracking ? 'active' : ''}" onclick="toggleAcompanhar('${escapeHtml(c.id)}')" title="Acompanhar este concurso">
-                <i data-lucide="${isTracking ? 'bookmark-check' : 'bookmark'}" style="width: 15px; height: 15px;"></i>
-                <span>${isTracking ? 'Acompanhando' : 'Acompanhar'}</span>
-              </button>
-            </div>
-
-            <!-- Linha 2: Título + Órgão + Cargos -->
-            <div class="card-row-2">
-              <h2 class="concurso-title">${escapeHtml(c.titulo)}</h2>
-              <div class="concurso-orgao">
-                <i data-lucide="landmark" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
-                <span>${escapeHtml(c.orgao)}</span>
-              </div>
-              <div class="cargos-wrap">
-                ${cargosHtml}
-              </div>
-            </div>
-
-            <!-- Linha 3: Meta Dados + Análise do Radar -->
-            <div class="meta-grid">
-              <div class="meta-item">
-                <i data-lucide="coins" style="width: 15px; height: 15px; color: #34d399;"></i>
-                <span>Vencimento: <strong>${escapeHtml(c.salario_resumo || 'A consultar')}</strong></span>
-              </div>
-              <div class="meta-item">
-                <i data-lucide="calendar" style="width: 15px; height: 15px; color: #60a5fa;"></i>
-                <span>Inscrições: <strong>${escapeHtml(c.prazo_inscricao || 'Em breve')}</strong></span>
-              </div>
-            </div>
-
-            ${c.resumo_ia ? `
-              <div class="ai-summary">
-                <div class="ai-summary-header">
-                  <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
-                  Análise Técnica do Radar
-                </div>
-                ${escapeHtml(c.resumo_ia)}
-              </div>
-            ` : ''}
-
-            <!-- Linha 4: Ações Técnicas -->
-            <div class="card-actions">
-              <button class="btn-action btn-official" onclick="abrirModalPortais('${escapeHtml(c.cidade)}')">
-                <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Portais da Cidade
-              </button>
-              ${linkOficialBtn}
-              <button class="btn-action btn-study" onclick="abrirModalPlano('${escapeHtml(c.id)}')">
-                <i data-lucide="graduation-cap" style="width: 15px; height: 15px;"></i> Gerar Plano de Estudos
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      lucide.createIcons();
-    }
-
-    // --- RECURSO: ACOMPANHAR (LOCAL-FIRST IMEDIATO) ---
-    function toggleAcompanhar(id) {
-      const idx = state.acompanhados.indexOf(id);
-      if (idx > -1) {
-        state.acompanhados.splice(idx, 1);
-        showToast('Concurso removido da sua lista de acompanhamento.');
-      } else {
-        state.acompanhados.push(id);
-        showToast('Concurso adicionado aos acompanhados!', 'success');
-      }
-      localStorage.setItem('radar_acompanhados', JSON.stringify(state.acompanhados));
-      renderizarTudo();
-    }
-
-    // --- MODAL: PORTAIS OFICIAIS DO MUNICÍPIO ---
-    function abrirModalPortais(cidade) {
-      const dados = PORTAIS_CIDADES[cidade] || {
-        site: `https://www.google.com/search?q=prefeitura+${encodeURIComponent(cidade)}+oficial`,
-        diario: `https://www.google.com/search?q=diario+oficial+${encodeURIComponent(cidade)}`,
-        concursos: `https://www.google.com/search?q=concursos+prefeitura+${encodeURIComponent(cidade)}`,
-        licitacoes: `https://www.google.com/search?q=licitacoes+prefeitura+${encodeURIComponent(cidade)}`
-      };
-
-      document.getElementById('modalPortaisTitulo').innerText = `Portais Oficiais — ${cidade}`;
-      
-      const listaEl = document.getElementById('modalPortaisLista');
-      listaEl.innerHTML = `
-        <a href="${dados.site}" target="_blank" rel="noopener noreferrer" class="portal-item-link">
-          <div class="portal-link-info">
-            <span class="portal-link-title">Site Oficial da Prefeitura</span>
-            <span class="portal-link-desc">Portal institucional de ${escapeHtml(cidade)}</span>
-          </div>
-          <i data-lucide="arrow-up-right" style="width: 18px; height: 18px; color: var(--text-dim);"></i>
-        </a>
-
-        <a href="${dados.diario}" target="_blank" rel="noopener noreferrer" class="portal-item-link">
-          <div class="portal-link-info">
-            <span class="portal-link-title">Diário Oficial do Município</span>
-            <span class="portal-link-desc">Publicações de decretos, comissões e atos oficiais</span>
-          </div>
-          <i data-lucide="arrow-up-right" style="width: 18px; height: 18px; color: var(--text-dim);"></i>
-        </a>
-
-        <a href="${dados.concursos}" target="_blank" rel="noopener noreferrer" class="portal-item-link">
-          <div class="portal-link-info">
-            <span class="portal-link-title">Página Oficial de Concursos & Processos Seletivos</span>
-            <span class="portal-link-desc">Editais, retificações, gabaritos e convocações</span>
-          </div>
-          <i data-lucide="arrow-up-right" style="width: 18px; height: 18px; color: var(--text-dim);"></i>
-        </a>
-
-        <a href="${dados.licitacoes}" target="_blank" rel="noopener noreferrer" class="portal-item-link">
-          <div class="portal-link-info">
-            <span class="portal-link-title">Portal de Licitações & Contratação de Bancas</span>
-            <span class="portal-link-desc">Editais de pregão e concorrência para escolha de banca</span>
-          </div>
-          <i data-lucide="arrow-up-right" style="width: 18px; height: 18px; color: var(--text-dim);"></i>
-        </a>
-      `;
-
-      abrirModal('modalPortais');
-    }
-
-    // --- MODAL: PLANO DE ESTUDOS INTELIGENTE ---
-    let planoEstudoItem = null;
-
-    function abrirModalPlano(concursoId) {
-      const item = state.concursos.find(c => c.id === concursoId);
-      if (!item) return;
-
-      planoEstudoItem = item;
-      document.getElementById('modalPlanoTitulo').innerText = `Plano de Estudos: ${item.cidade}`;
-      
-      const cargosStr = (item.cargos || []).join(', ');
-      const temLicitacao = /licitaç|compras|contrato/i.test(cargosStr);
-      
-      const modalBody = document.getElementById('modalPlanoBody');
-      modalBody.innerHTML = `
-        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px;">
-          <strong style="color: #34d399; display: flex; align-items: center; gap: 6px; font-size: 0.86rem;">
-            <i data-lucide="target" style="width: 15px; height: 15px;"></i> Foco do Concurso
-          </strong>
-          <p style="font-size: 0.8rem; color: #cbd5e1; margin-top: 3px;">
-            ${escapeHtml(item.titulo)} (${escapeHtml(item.orgao)})
-          </p>
-        </div>
-
-        <div class="study-subject-box">
-          <div class="study-subject-title">
-            <span>1. Língua Portuguesa</span>
-            <span style="font-size: 0.72rem; color: #34d399;">Base Eliminatória</span>
-          </div>
-          <ul class="study-topics-list">
-            <li>Interpretação e compreensão de textos técnicos e oficiais</li>
-            <li>Concordância verbal/nominal, regência e aplicação da crase</li>
-            <li>Pontuação expressiva e sintaxe dos períodos simples e composto</li>
-          </ul>
-        </div>
-
-        <div class="study-subject-box">
-          <div class="study-subject-title">
-            <span>2. Raciocínio Lógico & Matemática</span>
-            <span style="font-size: 0.72rem; color: #38bdf8;">Base Comum</span>
-          </div>
-          <ul class="study-topics-list">
-            <li>Regra de três, porcentagem e cálculos proporcionais</li>
-            <li>Estruturas lógicas, tabelas-verdade e diagramas lógicos</li>
-          </ul>
-        </div>
-
-        ${temLicitacao ? `
-          <div class="study-subject-box" style="border-color: rgba(197, 160, 89, 0.4); background: rgba(197, 160, 89, 0.06);">
-            <div class="study-subject-title" style="color: #fde68a;">
-              <span>3. Nova Lei de Licitações (Lei Federal 14.133/21)</span>
-              <span style="font-size: 0.72rem; color: #c5a059; font-weight: 700;">ALTA PRIORIDADE</span>
-            </div>
-            <ul class="study-topics-list">
-              <li>Princípios gerais, planejamento e Estudo Técnico Preliminar (ETP)</li>
-              <li>Modalidades licitatórias: Pregão, Concorrência e Diálogo Competitivo</li>
-              <li>Contratação direta: Hipóteses de Dispensa e Inexigibilidade</li>
-              <li>Gestão, fiscalização e alterações dos contratos administrativos</li>
-            </ul>
-          </div>
-        ` : `
-          <div class="study-subject-box">
-            <div class="study-subject-title">
-              <span>3. Legislação Municipal & Noções Constitucionais</span>
-              <span style="font-size: 0.72rem; color: #a78bfa;">Específica</span>
-            </div>
-            <ul class="study-topics-list">
-              <li>Lei Orgânica do Município de ${escapeHtml(item.cidade)}</li>
-              <li>Estatuto dos Servidores Públicos Municipais</li>
-              <li>Artigo 37 da Constituição Federal (Princípios da Administração Pública)</li>
-            </ul>
-          </div>
-        `}
-
-        <div class="study-subject-box">
-          <div class="study-subject-title">
-            <span>4. Rotinas Administrativas & Informática</span>
-            <span style="font-size: 0.72rem; color: #94a3b8;">Complementar</span>
-          </div>
-          <ul class="study-topics-list">
-            <li>Redação Oficial de atos municipais, ofícios e memorandos</li>
-            <li>Planilhas eletrônicas e gestão documental segura</li>
-          </ul>
-        </div>
-      `;
-
-      abrirModal('modalPlanoEstudo');
-    }
-
-    function copiarPlanoEstudo() {
-      if (!planoEstudoItem) return;
-      const c = planoEstudoItem;
-      const texto = `=== PLANO DE ESTUDOS: ${c.cidade} - ${c.titulo} ===\n` +
-        `Órgão: ${c.orgao}\n` +
-        `Status: ${c.status}\n` +
-        `Cargos: ${(c.cargos || []).join(', ')}\n\n` +
-        `1. LÍNGUA PORTUGUESA:\n- Interpretação de texto\n- Concordância e regência verbal/nominal\n- Crase e pontuação\n\n` +
-        `2. RACIOCÍNIO LÓGICO / MATEMÁTICA:\n- Porcentagem e proporções\n- Regra de três e diagramas lógicos\n\n` +
-        `3. CONHECIMENTOS ESPECÍFICOS & LEGISLAÇÃO:\n- Lei Orgânica de ${c.cidade}\n- Nova Lei de Licitações (Lei 14.133/21)\n- Princípios da Administração Pública (CF/88 art. 37)\n\n` +
-        `Gerado pelo Radar de Concursos SP`;
-
-      navigator.clipboard.writeText(texto);
-      showToast('Grade do plano de estudos copiada!', 'success');
-    }
-
-    // --- RECURSO: CONSULTA AVULSA AO VIVO COM GEMINI 3.6 FLASH ---
-    function abrirModalConsultaAvulsa() {
-      document.getElementById('consultaForm').style.display = 'block';
-      document.getElementById('consultaLoading').style.display = 'none';
-      abrirModal('modalConsultaAvulsa');
-    }
-
-    async function executarConsultaAvulsaLive() {
-      const cidade = document.getElementById('avulsoCidade').value.trim();
-      const cargo = document.getElementById('avulsoCargo').value.trim();
-      const apiKey = state.geminiKey;
-
-      if (!cidade) {
-        showToast('Informe o município para a pesquisa.', 'error');
-        return;
-      }
-
-      if (!apiKey) {
-        showToast('Chave Gemini API não configurada.', 'error');
-        return;
-      }
-
-      document.getElementById('consultaForm').style.display = 'none';
-      document.getElementById('consultaLoading').style.display = 'flex';
-
-      const prompt = `Você é um especialista em monitoramento de concursos públicos e licitações no estado de São Paulo.
-Faça uma pesquisa profunda e atualizada na web sobre concursos públicos, processos seletivos e licitações de bancas organizadoras no município de ${cidade} - SP, com foco em: ${cargo}.
-Ano de referência: ${new Date().getFullYear()} ou meses recentes.
-
-REGRAS DE STATUS OBRIGATÓRIAS:
-- "Edital Aberto": use APENAS se as inscrições estiverem ABERTAS hoje e o candidato ainda puder se inscrever.
-- "Em Andamento (Recursos / Gabarito)": use se as inscrições já fecharam, ou se as provas já foram realizadas e está em fase de gabarito preliminar, recursos ou resultados.
-- "Licitação": use quando a prefeitura estiver contratando a banca examinadora (pregão ou dispensa).
-- "Previsto": use para concurso anunciado sem edital publicado.
-- "Cancelado / Suspenso": se foi suspenso ou cancelado.
-
-REGRAS DE LINKS OBRIGATÓRIAS:
-- NUNCA invente URLs falsas ou rotas genéricas (/licitacoes ou /concursos) se você não as viu comprovadamente na busca.
-- Retorne apenas links reais verificados da banca examinadora (ex: consulplan, vunesp) ou a página real de serviços do município, ou o domínio oficial raiz.
-
-Retorne EXCLUSIVAMENTE um array JSON puro:
-[
-  {
-    "cidade": "${cidade}",
-    "orgao": "Nome do órgão (ex: Prefeitura de ${cidade})",
-    "titulo": "Título oficial do concurso ou licitação",
-    "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
-    "cargos": ["Cargo 1", "Cargo 2"],
-    "areas": ["Administrativo", "Licitações", "Geral"],
-    "salario_resumo": "Vencimento informado ou A consultar",
-    "prazo_inscricao": "Status das inscrições e provas (ex: Provas realizadas • Recursos abertos)",
-    "link_oficial": "URL oficial real verificada",
-    "resumo_ia": "Resumo objetivo explicando o momento exato do certame."
-  }
-]`;
-
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            tools: [{ google_search: {} }]
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Código HTTP ' + response.status);
-        }
-
-        const data = await response.json();
-        const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        // Limpa delimitadores
-        const clean = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const sIdx = clean.indexOf('[');
-        const eIdx = clean.lastIndexOf(']');
-
-        if (sIdx !== -1 && eIdx !== -1) {
-          const items = JSON.parse(clean.substring(sIdx, eIdx + 1));
-          if (items.length > 0) {
-            items.forEach(item => {
-              item.id = `avulso_${cidade}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-              item.updated_at = new Date().toISOString();
-              state.concursos.unshift(item);
-            });
-
-            localStorage.setItem('radar_concursos_cache', JSON.stringify(state.concursos));
-            renderizarTudo();
-            fecharModal('modalConsultaAvulsa');
-            showToast(`Consulta avulsa concluída: ${items.length} novidades inseridas!`, 'success');
-            return;
-          }
-        }
-        
-        fecharModal('modalConsultaAvulsa');
-        showToast('Varredura concluída. Nenhuma alteração recente encontrada.', 'info');
-      } catch(err) {
-        console.warn('Erro na consulta avulsa:', err);
-        fecharModal('modalConsultaAvulsa');
-        showToast('Consulta finalizada ou limite de requisições atingido. Tente novamente em instantes.', 'info');
-      }
-    }
-
-    // --- MODAL CONFIGURAÇÕES ---
-    function abrirModalConfig() {
-      abrirModal('modalConfig');
-    }
-
-    function salvarConfiguracoes() {
-      const url = document.getElementById('cfgSupabaseUrl').value.trim();
-      const key = document.getElementById('cfgSupabaseKey').value.trim();
-      const gemini = document.getElementById('cfgGeminiKey').value.trim();
-
-      if (url) localStorage.setItem('radar_supabase_url', url);
-      if (key) localStorage.setItem('radar_supabase_key', key);
-      if (gemini) {
-        localStorage.setItem('radar_gemini_key', gemini);
-        state.geminiKey = gemini;
-      }
-
-      if (url && key && window.supabase) {
-        state.supabase = window.supabase.createClient(url, key);
-      }
-
-      showToast('Configurações salvas!', 'success');
-      fecharModal('modalConfig');
-    }
-
-    async function testarConexao() {
-      const url = document.getElementById('cfgSupabaseUrl').value.trim();
-      const key = document.getElementById('cfgSupabaseKey').value.trim();
-
-      if (!url || !key) {
-        showToast('Preencha a URL e a Anon Key do Supabase.', 'error');
-        return;
-      }
-
-      try {
-        const client = window.supabase.createClient(url, key);
-        const { data, error } = await client.from('concursos').select('id').limit(1);
-        if (error) {
-          showToast('Falha: ' + error.message, 'error');
-        } else {
-          showToast('Conexão com o Supabase estabelecida com sucesso!', 'success');
-        }
-      } catch(e) {
-        showToast('Erro de conexão: ' + e.message, 'error');
-      }
-    }
-
-    // --- WEB PUSH NATIVO ---
-    function verificarPermissaoPush() {
-      if (!('Notification' in window)) return;
-      const btn = document.getElementById('btnNotify');
-      if (Notification.permission === 'granted' && btn) {
-        btn.classList.add('active');
-      }
-    }
-
-    async function ativarWebPush() {
-      if (!('Notification' in window)) {
-        showToast('Navegador não suporta notificações nativas.', 'error');
-        return;
-      }
-
-      if (Notification.permission === 'granted') {
-        showToast('Alertas já estão ativos no seu celular.', 'info');
-        return;
-      }
-
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          showToast('Alertas ativados com sucesso!', 'success');
-          document.getElementById('btnNotify').classList.add('active');
-          if ('serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.ready;
-            reg.showNotification('Radar de Concursos SP', {
-              body: 'Tudo pronto! Você receberá alertas de concursos e licitações.',
-              icon: './favicon.png'
-            });
-          }
-        }
-      } catch(e) {
-        console.warn('Erro ao solicitar permissão de push:', e);
-      }
-    }
-
-    // --- SERVICE WORKER REGISTRATION ---
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
-          console.warn('[PWA] Service Worker:', err);
-        });
-      });
-    }
-
-    // --- UTILITÁRIOS ---
-    function escapeHtml(str) {
-      if (typeof str !== 'string') return '';
-      return str.replace(/[&<>"']/g, function(m) {
-        switch (m) {
-          case '&': return '&amp;';
-          case '<': return '&lt;';
-          case '>': return '&gt;';
-          case '"': return '&quot;';
-          case "'": return '&#039;';
-          default: return m;
-        }
-      });
-    }
-
-    function showToast(msg, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      
-      let icon = 'info';
-      let iconColor = '#60a5fa';
-      if (type === 'success') { icon = 'check-circle'; iconColor = '#10b981'; }
-      if (type === 'error') { icon = 'alert-circle'; iconColor = '#f43f5e'; }
-
-      toast.innerHTML = `<i data-lucide="${icon}" style="width: 17px; height: 17px; color: ${iconColor}; flex-shrink: 0;"></i> <span>${escapeHtml(msg)}</span>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(12px)';
-        toast.style.transition = 'all 0.2s ease';
-        setTimeout(() => toast.remove(), 220);
-      }, 3400);
-    }
-  </script>
+  <!-- Script Principal ES Module -->
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
