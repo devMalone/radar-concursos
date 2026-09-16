@@ -61,7 +61,19 @@
     <section class="tab-view active" id="tab-radar">
       <div class="search-box">
         <i data-lucide="search" style="width: 17px; height: 17px; color: var(--text-dim); flex-shrink: 0;"></i>
-        <input type="text" id="inputBusca" placeholder="Pesquisar cargo, órgão, licitação, banca..." autocomplete="off">
+        <input 
+          type="search" 
+          id="inputBusca" 
+          name="busca_concursos_livre"
+          placeholder="Pesquisar cargo, órgão, licitação, banca..." 
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          data-form-type="other"
+          data-lpignore="true"
+          data-1p-ignore="true"
+        >
       </div>
 
       <div class="pills-bar-wrapper">
@@ -154,12 +166,41 @@
 
           <div class="form-group">
             <label class="form-label" for="cfgSupabaseUrl">URL do Projeto Supabase</label>
-            <input type="url" class="form-input" id="cfgSupabaseUrl" placeholder="https://vbnzvyxhfnsmbmgxahvn.supabase.co">
+            <input 
+              type="url" 
+              class="form-input" 
+              id="cfgSupabaseUrl" 
+              name="supabase_project_endpoint"
+              placeholder="https://vbnzvyxhfnsmbmgxahvn.supabase.co"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              data-form-type="other"
+              data-lpignore="true"
+            >
           </div>
 
           <div class="form-group">
             <label class="form-label" for="cfgSupabaseKey">Anon Public Key</label>
-            <input type="password" class="form-input" id="cfgSupabaseKey" placeholder="Cole a Anon Key do Supabase...">
+            <div class="api-key-wrap">
+              <input 
+                type="text" 
+                class="form-input api-key-input" 
+                id="cfgSupabaseKey" 
+                name="supabase_token_public"
+                placeholder="Cole a Anon Key do Supabase..."
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
+              >
+              <button type="button" class="btn-toggle-key" onclick="window.radarActions.toggleMostrarChave('cfgSupabaseKey', this)" title="Mostrar/Ocultar chave">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
           </div>
 
           <div class="card-actions-row" style="border: none; padding-top: 4px;">
@@ -186,7 +227,25 @@
 
           <div class="form-group">
             <label class="form-label" for="cfgGeminiKey">Gemini API Key</label>
-            <input type="password" class="form-input" id="cfgGeminiKey" placeholder="Cole sua chave da Gemini API...">
+            <div class="api-key-wrap">
+              <input 
+                type="text" 
+                class="form-input api-key-input" 
+                id="cfgGeminiKey" 
+                name="gemini_token_api"
+                placeholder="Cole sua chave da Gemini API..."
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
+              >
+              <button type="button" class="btn-toggle-key" onclick="window.radarActions.toggleMostrarChave('cfgGeminiKey', this)" title="Mostrar/Ocultar chave">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
           </div>
 
           <button class="btn-modal-main" id="btnSalvarConfig" style="margin-top: 4px;">
@@ -266,12 +325,38 @@
 
         <div class="form-group">
           <label class="form-label" for="avulsoCidade">Município de Interesse</label>
-          <input type="text" class="form-input" id="avulsoCidade" placeholder="Ex: Catanduva, Potirendaba, Rio Preto..." value="Catanduva">
+          <input 
+            type="text" 
+            class="form-input" 
+            id="avulsoCidade" 
+            name="filtro_municipio_busca"
+            placeholder="Ex: Catanduva, Potirendaba, Rio Preto..." 
+            value="Catanduva"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-form-type="other"
+            data-lpignore="true"
+          >
         </div>
 
         <div class="form-group">
           <label class="form-label" for="avulsoCargo">Cargo, Área ou Palavra-Chave</label>
-          <input type="text" class="form-input" id="avulsoCargo" placeholder="Ex: Assistente de Licitação, Agente de Trânsito..." value="Assistente de Licitação">
+          <input 
+            type="text" 
+            class="form-input" 
+            id="avulsoCargo" 
+            name="filtro_area_busca"
+            placeholder="Ex: Assistente de Licitação, Agente de Trânsito..." 
+            value="Assistente de Licitação"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-form-type="other"
+            data-lpignore="true"
+          >
         </div>
 
         <button class="btn-modal-main" style="margin-top: 4px;" onclick="window.radarActions.executarConsultaAvulsaLive()">

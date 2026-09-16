@@ -235,6 +235,54 @@
   width: 100%;
 }
 
+.search-box input::-webkit-search-decoration,
+.search-box input::-webkit-search-cancel-button,
+.search-box input::-webkit-search-results-button,
+.search-box input::-webkit-search-results-decoration {
+  display: none;
+}
+
+/* Container e máscara de Chaves de API sem acionar o gerenciador de senhas do navegador */
+.api-key-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.api-key-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+  padding-right: 42px !important;
+  font-family: monospace, inherit !important;
+  letter-spacing: 1.5px;
+}
+
+.api-key-input.revealed {
+  -webkit-text-security: none !important;
+  text-security: none !important;
+  letter-spacing: normal;
+}
+
+.btn-toggle-key {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.btn-toggle-key:hover {
+  color: var(--text);
+}
+
 .pills-bar-wrapper {
   margin-bottom: 14px;
   display: flex;

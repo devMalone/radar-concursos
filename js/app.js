@@ -6,7 +6,8 @@ import {
   fecharModal, 
   fecharModalAtual, 
   mostrarToast, 
-  refreshIcons 
+  refreshIcons,
+  toggleMostrarChave
 } from './utils.js';
 import { 
   renderizarRadar, 
@@ -43,7 +44,8 @@ window.radarActions = {
   sincronizarSupabase,
   testarConexaoSupabase,
   salvarConfiguracoes,
-  ativarNotificacoes
+  ativarNotificacoes,
+  toggleMostrarChave
 };
 
 // ================= SINCRONIZAÇÃO DE ALTURA (100dvh) =================

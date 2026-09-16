@@ -39,6 +39,23 @@ export function fecharModal(modalId) {
   }
 }
 
+export function toggleMostrarChave(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const isRevealed = input.classList.contains('revealed');
+  const icon = btnEl.querySelector('i');
+
+  if (!isRevealed) {
+    input.classList.add('revealed');
+    if (icon) icon.setAttribute('data-lucide', 'eye-off');
+  } else {
+    input.classList.remove('revealed');
+    if (icon) icon.setAttribute('data-lucide', 'eye');
+  }
+  refreshIcons();
+}
+
 export function mostrarToast(msg, tipo = 'info') {
   const toast = document.getElementById('appToast');
   const toastMsg = document.getElementById('toastMsg');
