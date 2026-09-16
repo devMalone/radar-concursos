@@ -12,7 +12,17 @@ export function getStatusBadgeClass(status) {
   if (s.includes('licita')) return 'status-licit';
   if (s.includes('previsto')) return 'status-prev';
   if (s.includes('canc') || s.includes('susp')) return 'status-canc';
-  if (s.includes('andamento') || s.includes('recurso') || s.includes('resultado') || s.includes('gabarito') || s.includes('encerrad')) {
+  if (
+    s.includes('andamento') || 
+    s.includes('recurso') || 
+    s.includes('resultado') || 
+    s.includes('gabarito') || 
+    s.includes('encerrad') || 
+    s.includes('convoca') || 
+    s.includes('formação') || 
+    s.includes('classifica') || 
+    s.includes('vigente')
+  ) {
     return 'status-andamento';
   }
   return 'status-prev';
@@ -37,7 +47,17 @@ export function filtrarConcursos(apenasAcompanhados = false) {
       const s = (c.status || '').toLowerCase();
       const tab = state.filtroTab.toLowerCase();
       if (tab === 'andamento') {
-        if (!s.includes('andamento') && !s.includes('recurso') && !s.includes('resultado') && !s.includes('gabarito') && !s.includes('encerrad')) {
+        if (
+          !s.includes('andamento') && 
+          !s.includes('recurso') && 
+          !s.includes('resultado') && 
+          !s.includes('gabarito') && 
+          !s.includes('encerrad') &&
+          !s.includes('convoca') &&
+          !s.includes('formação') &&
+          !s.includes('classifica') &&
+          !s.includes('vigente')
+        ) {
           return false;
         }
       } else if (!s.includes(tab)) {

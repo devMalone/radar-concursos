@@ -18,7 +18,7 @@ export const state = {
   isOnline: false
 };
 
-const CACHE_KEY = 'radar_concursos_cache_v5';
+const CACHE_KEY = 'radar_concursos_cache_v6';
 
 const DADOS_INICIAIS = [
   {
@@ -39,28 +39,28 @@ const DADOS_INICIAIS = [
     id: "sao_jose_do_rio_preto_vunesp_geral_2026",
     cidade: "São José do Rio Preto",
     orgao: "Prefeitura Municipal de São José do Rio Preto",
-    titulo: "Concurso Público 01/2025 — Quadro Geral da Prefeitura (506 Vagas)",
+    titulo: "Concurso Público nº 01/2025 — Quadro Geral da Prefeitura (506 Vagas)",
     status: "Em Andamento (Recursos / Gabarito)",
-    cargos: ["Agente Administrativo", "Assistente de Licitação", "Fiscal de Posturas", "Técnico em Enfermagem", "Analista"],
+    cargos: ["Agente Administrativo", "Assistente de Licitação", "Fiscal de Posturas", "Técnico em Enfermagem", "Auditor Fiscal"],
     areas: ["Administrativo", "Licitações", "Fiscal", "Saúde"],
     salario_resumo: "R$ 2.400,00 a R$ 10.500,00",
-    prazo_inscricao: "Inscrições encerradas • Provas aplicadas • Fase de Classificação Prévia e Recursos",
+    prazo_inscricao: "Inscrições encerradas • Provas aplicadas • Fase de Classificação e Nomeações",
     link_oficial: "https://www.vunesp.com.br",
-    resumo_ia: "Grande concurso organizado pela Fundação Vunesp com 506 vagas imediatas. As provas já foram realizadas; certame atualmente na fase de publicação de notas e análise de recursos dos candidatos.",
+    resumo_ia: "Grande concurso organizado pela Fundação Vunesp com 506 vagas imediatas para áreas administrativa, fiscal, saúde e trânsito. Provas aplicadas; certame atualmente na fase de publicação de notas, recursos e nomeações dos aprovados. Concurso vigente sem novo certame geral previsto.",
     updated_at: new Date().toISOString()
   },
   {
-    id: "sao_jose_do_rio_preto_gcm_previsao",
+    id: "sao_jose_do_rio_preto_gcm_2024",
     cidade: "São José do Rio Preto",
     orgao: "Prefeitura Municipal de São José do Rio Preto",
-    titulo: "Guarda Civil Municipal (GCM) — Novo Concurso em Estudos",
-    status: "Previsto",
+    titulo: "Concurso Público nº 01/2024 — Guarda Civil Municipal (100 Vagas)",
+    status: "Em Andamento (Recursos / Gabarito)",
     cargos: ["Guarda Civil Municipal - 3ª Classe", "Segurança Urbana"],
     areas: ["Segurança", "Operacional"],
     salario_resumo: "R$ 2.897,00 + adicionais e benefícios",
-    prazo_inscricao: "Planejamento e estudos para novo edital de expansão",
-    link_oficial: "https://www.riopreto.sp.gov.br/concursos",
-    resumo_ia: "O último concurso de GCM ocorreu em 2024 pela Fundação Vunesp (edital de 2024 já encerrado/em convocação). A administração municipal de Rio Preto estuda novo certame para recomposição e ampliação do efetivo.",
+    prazo_inscricao: "Inscrições encerradas • Provas aplicadas • Curso de Formação e Convocações",
+    link_oficial: "https://www.vunesp.com.br",
+    resumo_ia: "Certame organizado pela Fundação Vunesp para 100 vagas de nível médio. Fases de provas, TAF e psicotécnico concluídas, avançando para o Curso de Formação da Guarda. Certame ativo em fase de convocações; não há novo concurso de GCM autorizado no momento.",
     updated_at: new Date().toISOString()
   },
   {

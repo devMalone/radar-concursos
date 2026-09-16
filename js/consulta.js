@@ -54,23 +54,19 @@ ${contextoPortal}
 
 DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
 
-⚠️ DIRETRIZES DE TEMPORALIDADE E ANTI-ANACRONISMO (CRÍTICO):
-1. Verifique SEMPRE a data do edital e o encerramento das inscrições:
-   - Editais de 2024, 2023 ou meses passados cujas inscrições já fecharam ou cujas provas já foram realizadas NÃO ESTÃO ABERTOS!
-   - NUNCA marque um concurso com "Edital Aberto" se a data limite de inscrição já passou em relação a ${hojeStr}.
-2. Se o certame é de 2024/2025 e as provas já aconteceram ou as inscrições fecharam:
-   - Use o status: "Em Andamento (Recursos / Gabarito)".
-   - E no prazo_inscricao informe: "Inscrições encerradas • Provas realizadas • Fase de recursos/classificação".
-3. Se o certame de 2024 já foi concluído/homologado e há expectativa, estudos ou movimentação da prefeitura para um novo certame (ex: Guarda Civil Municipal de Rio Preto, onde o concurso anterior foi em 2024 e a prefeitura estuda novas vagas para 2026/2027):
-   - Use o status: "Previsto".
-   - Título: "Guarda Civil Municipal — Novo Concurso em Planejamento".
-   - Explique no resumo_ia: "O último concurso ocorreu em 2024 pela banca Vunesp (encerrado). O município planeja novo edital para ampliação do efetivo."
-4. Status válidos permitidos:
-   - "Edital Aberto": SOMENTE se as inscrições estiverem formalmente abertas hoje para novos inscritos.
-   - "Em Andamento (Recursos / Gabarito)": se as provas já ocorreram ou as inscrições já fecharam e está em fase de resultados.
-   - "Licitação": quando o município abriu licitação/pregão/dispensa para contratar a banca organizadora.
-   - "Previsto": certames autorizados, comissão formada ou estudos anunciados.
-   - "Cancelado / Suspenso": certames com atos revogados ou suspensos judicialmente.
+⚠️ DIRETRIZES DE AUDITORIA PÚBLICA E ANTI-ALUCINAÇÃO (MÁXIMA RIGIDEZ):
+1. VIGÊNCIA DE CONCURSOS E CADASTRO DE RESERVA (CF/88 art. 37):
+   - Concursos homologados possuem validade legal de 2 anos (prorrogáveis por mais 2).
+   - Enquanto um concurso estiver vigente (como o Concurso Geral nº 01/2025 da Vunesp em Rio Preto com 506 vagas, ou o Concurso GCM nº 01/2024 da Vunesp em fase de Curso de Formação), o município convoca os aprovados e NÃO pode abrir novo concurso para os mesmos cargos.
+   - NUNCA invente que a prefeitura "está estudando novo certame" ou classifique como "Previsto" a menos que exista comprovação documental no Diário Oficial (portaria de comissão organizadora instituída ou autorização expressa do Prefeito).
+   - Se o concurso recente estiver vigente ou em etapas de nomeação/curso de formação, relate a realidade com precisão: que o concurso está em andamento/vigente chamando os aprovados, e que não há novo certame oficialmente autorizado.
+
+2. VERIFICAÇÃO RIGOROSA DO STATUS:
+   - "Edital Aberto": EXCLUSIVO para certames onde as inscrições estejam formalmente abertas HOJE para novos candidatos (data limite de inscrição >= ${hojeStr}).
+   - "Em Andamento (Recursos / Gabarito)": Use para certames cujas provas já foram realizadas ou inscrições fecharam, e estão em fase de recursos, gabaritos, classificação, curso de formação ou convocações de aprovados.
+   - "Licitação": Quando o município abriu processo formal no Diário Oficial para contratar banca examinadora (pregão ou dispensa).
+   - "Previsto": SOMENTE com ato oficial de comissão formada publicado em Diário Oficial.
+   - "Cancelado / Suspenso": Certames com atos revogados ou suspensos judicialmente.
 
 ⚠️ REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
 - Retorne links REAIS e que funcionem ao clicar:

@@ -52,12 +52,18 @@ Faça uma pesquisa rigorosa na web com o Google Search para identificar concurso
 
 DATA EXATA DE REFERÊNCIA HOJE: {data_hoje_str} (Ano atual: {ano_atual}).
 
-⚠️ DIRETRIZES RIGOROSAS DE TEMPORALIDADE (ANTI-ANACRONISMO):
-1. Verifique sempre se as inscrições ainda estão ativas em relação a {data_hoje_str}:
-   - Editais de 2024, 2023 ou meses anteriores com inscrições encerradas ou provas já realizadas NUNCA devem ser classificados como "Edital Aberto"!
-   - Se as provas já foram aplicadas ou inscrições fecharam, o status OBRIGATÓRIO é "Em Andamento (Recursos / Gabarito)".
-   - Se o certame anterior de 2024 já foi homologado e o município estuda/planeja novo concurso para 2026/2027 (ex: Guarda Civil Municipal de Rio Preto, cujo certame anterior da Vunesp foi em 2024), classifique como "Previsto" com título "Guarda Civil Municipal — Novo Concurso em Estudos" e explique isso no resumo.
-2. "Edital Aberto" é EXCLUSIVAMENTE para certames onde qualquer pessoa ainda consiga se inscrever HOJE (data final >= {data_hoje_str}).
+⚠️ DIRETRIZES DE AUDITORIA PÚBLICA E ANTI-ALUCINAÇÃO (MÁXIMA RIGIDEZ):
+1. VIGÊNCIA DE CONCURSOS E CADASTRO DE RESERVA (CF/88 art. 37):
+   - Concursos homologados possuem validade legal de 2 anos (prorrogáveis por mais 2).
+   - Enquanto um concurso estiver vigente (como o Concurso Geral nº 01/2025 da Vunesp em Rio Preto com 506 vagas, ou o Concurso GCM nº 01/2024 da Vunesp em fase de Curso de Formação), o município convoca os aprovados e NÃO pode abrir novo concurso para os mesmos cargos.
+   - NUNCA invente que a prefeitura "está estudando novo certame" ou classifique como "Previsto" sem comprovação documental no Diário Oficial (portaria de comissão organizadora ou autorização expressa do Prefeito).
+   - Se o concurso recente estiver vigente ou em etapas de nomeação/curso de formação, relate a realidade com precisão: que o concurso está em andamento/vigente chamando os aprovados, e que não há novo certame oficialmente autorizado.
+2. VERIFICAÇÃO RIGOROSA DO STATUS:
+   - "Edital Aberto": EXCLUSIVAMENTE para certames onde as inscrições estejam formalmente abertas HOJE para novos candidatos (data final >= {data_hoje_str}).
+   - "Em Andamento (Recursos / Gabarito)": Use para certames cujas provas já foram realizadas ou inscrições fecharam, e estão em fase de recursos, classificação, curso de formação ou convocações.
+   - "Licitação": Quando o município abriu processo formal no Diário Oficial para contratar banca examinadora (pregão ou dispensa).
+   - "Previsto": SOMENTE com ato oficial de comissão formada publicado em Diário Oficial.
+   - "Cancelado / Suspenso": Certames com atos revogados ou suspensos judicialmente.
 
 ⚠️ REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
 - Retorne APENAS links reais e acessíveis da banca examinadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br) ou a página oficial de concursos da prefeitura.
