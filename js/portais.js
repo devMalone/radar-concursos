@@ -89,6 +89,96 @@ export const PORTAIS_CIDADES = {
   }
 };
 
+export const BANCAS_OFICIAIS = {
+  "vunesp": {
+    nome: "Fundação Vunesp",
+    sigla: "Vunesp",
+    site: "https://www.vunesp.com.br",
+    confiavel: true
+  },
+  "ibam": {
+    nome: "IBAM Concursos",
+    sigla: "IBAM-SP",
+    site: "https://www.ibamsp-concursos.org.br/site/",
+    confiavel: true
+  },
+  "consulplan": {
+    nome: "Instituto Consulplan",
+    sigla: "Consulplan",
+    site: "https://concurso4.institutoconsulplan.org.br",
+    confiavel: true
+  },
+  "consesp": {
+    nome: "Consesp Concursos",
+    sigla: "Consesp",
+    site: "https://www.consesp.com.br",
+    confiavel: true
+  },
+  "avanca": {
+    nome: "Avança SP",
+    sigla: "Avança SP",
+    site: "https://www.avancasp.org.br",
+    confiavel: true
+  },
+  "fcc": {
+    nome: "Fundação Carlos Chagas",
+    sigla: "FCC",
+    site: "https://www.concursosfcc.com.br",
+    confiavel: true
+  },
+  "cebraspe": {
+    nome: "Cebraspe",
+    sigla: "Cebraspe",
+    site: "https://www.cebraspe.org.br",
+    confiavel: true
+  },
+  "instituto mais": {
+    nome: "Instituto Mais",
+    sigla: "Inst. Mais",
+    site: "https://www.institutomais.org.br",
+    confiavel: true
+  }
+};
+
+export function identificarBancaOficial(texto) {
+  if (!texto) return null;
+  const t = texto.toLowerCase();
+  for (const [chave, banca] of Object.entries(BANCAS_OFICIAIS)) {
+    if (t.includes(chave) || t.includes(banca.sigla.toLowerCase()) || t.includes(banca.nome.toLowerCase())) {
+      return banca;
+    }
+  }
+  return null;
+}
+
+export function repararUrlOficial(urlOriginal, bancaNome, cidade) {
+  let url = (urlOriginal || '').trim();
+
+  // Se for URL quebrada ou rota deduzida inexistente
+  const isQuebrada = !url || 
+    url.includes('example.com') ||
+    url.includes('google.com/search') ||
+    url.endsWith('/licitacoes') || 
+    url.endsWith('/concursos') ||
+    url.includes('concurso-2024');
+
+  // Prioriza a banca oficial caso a URL seja genérica ou quebrada
+  const banca = identificarBancaOficial(bancaNome || url);
+  if (banca && isQuebrada) {
+    return banca.site;
+  }
+
+  // Fallback para portal da cidade
+  if (isQuebrada) {
+    const portais = PORTAIS_CIDADES[cidade];
+    if (portais) {
+      return portais.concursos || portais.site;
+    }
+  }
+
+  return url;
+}
+
 export function renderizarMunicipios() {
   const container = document.getElementById('municipiosList');
   if (!container) return;

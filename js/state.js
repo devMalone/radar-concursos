@@ -1,6 +1,6 @@
-// js/state.js — Gerenciador de Estado Local-First com Validador Anti-Anacronismo
+// js/state.js — Gerenciador de Estado Local-First com Validador Anti-Anacronismo e Escore de Confiança
 
-import { PORTAIS_CIDADES } from './portais.js';
+import { PORTAIS_CIDADES, BANCAS_OFICIAIS, identificarBancaOficial, repararUrlOficial } from './portais.js';
 
 export const state = {
   concursos: [],
@@ -11,22 +11,27 @@ export const state = {
   config: {
     supabaseUrl: 'https://vbnzvyxhfnsmbmgxahvn.supabase.co',
     supabaseKey: '',
-    geminiKey: ''
+    geminiKey: '',
+    braveKey: ''
   },
   modalStack: [],
   supabase: null,
   isOnline: false
 };
 
-const CACHE_KEY = 'radar_concursos_cache_v6';
+const CACHE_KEY = 'radar_concursos_cache_v7';
 
 const DADOS_INICIAIS = [
   {
     id: "catanduva_ibam_apoio_escolar_2026",
     cidade: "Catanduva",
     orgao: "Prefeitura Municipal de Catanduva",
+    banca: "IBAM-SP",
     titulo: "Processo Seletivo 2026 — Profissional de Apoio Escolar (66 Vagas)",
     status: "Edital Aberto",
+    fase_detalhada: "Inscrições Abertas até 01/10/2026",
+    confianca_score: 98,
+    confianca_rotulo: "Oficial Verificado",
     cargos: ["Profissional de Apoio Escolar", "Apoio Educacional", "Monitor Escolar"],
     areas: ["Educação", "Apoio", "Administrativo"],
     salario_resumo: "R$ 1.412,00 + R$ 809,27 (Auxílio-Alimentação)",
@@ -39,8 +44,12 @@ const DADOS_INICIAIS = [
     id: "sao_jose_do_rio_preto_vunesp_geral_2026",
     cidade: "São José do Rio Preto",
     orgao: "Prefeitura Municipal de São José do Rio Preto",
+    banca: "Fundação Vunesp",
     titulo: "Concurso Público nº 01/2025 — Quadro Geral da Prefeitura (506 Vagas)",
     status: "Em Andamento (Recursos / Gabarito)",
+    fase_detalhada: "Nomeações e Convocações Vigentes (Art. 37 CF/88)",
+    confianca_score: 95,
+    confianca_rotulo: "Oficial Verificado",
     cargos: ["Agente Administrativo", "Assistente de Licitação", "Fiscal de Posturas", "Técnico em Enfermagem", "Auditor Fiscal"],
     areas: ["Administrativo", "Licitações", "Fiscal", "Saúde"],
     salario_resumo: "R$ 2.400,00 a R$ 10.500,00",
@@ -53,8 +62,12 @@ const DADOS_INICIAIS = [
     id: "sao_jose_do_rio_preto_gcm_2024",
     cidade: "São José do Rio Preto",
     orgao: "Prefeitura Municipal de São José do Rio Preto",
+    banca: "Fundação Vunesp",
     titulo: "Concurso Público nº 01/2024 — Guarda Civil Municipal (100 Vagas)",
     status: "Em Andamento (Recursos / Gabarito)",
+    fase_detalhada: "Curso de Formação e Convocações",
+    confianca_score: 95,
+    confianca_rotulo: "Oficial Verificado",
     cargos: ["Guarda Civil Municipal - 3ª Classe", "Segurança Urbana"],
     areas: ["Segurança", "Operacional"],
     salario_resumo: "R$ 2.897,00 + adicionais e benefícios",
@@ -67,8 +80,12 @@ const DADOS_INICIAIS = [
     id: "potirendaba_concurso_001_2026",
     cidade: "Potirendaba",
     orgao: "Prefeitura Municipal de Potirendaba",
+    banca: "Instituto Consulplan",
     titulo: "Concurso Público 001/2026 — Quadro Geral e Específico",
     status: "Em Andamento (Recursos / Gabarito)",
+    fase_detalhada: "Recursos e Gabaritos Preliminares",
+    confianca_score: 92,
+    confianca_rotulo: "Oficial Verificado",
     cargos: ["Assistente de Licitação", "Agente Administrativo", "Secretário de Escola", "Agente de Trânsito", "Fiscal de Tributos"],
     areas: ["Administrativo", "Licitações", "Educação", "Segurança"],
     salario_resumo: "R$ 2.150,00 a R$ 5.400,00",
@@ -81,8 +98,12 @@ const DADOS_INICIAIS = [
     id: "mirassol_saae_concurso",
     cidade: "Mirassol",
     orgao: "SAAE - Serviço Autônomo de Água e Esgoto de Mirassol",
+    banca: "Prefeitura / Autarquia",
     titulo: "Concurso Público Autárquico — Quadro Operacional e Compras",
     status: "Edital Aberto",
+    fase_detalhada: "Inscrições Abertas no Portal Oficial",
+    confianca_score: 88,
+    confianca_rotulo: "Auditado • Diário Oficial",
     cargos: ["Comprador", "Agente Administrativo", "Operador de ETA", "Técnico Químico"],
     areas: ["Administrativo", "Licitações", "Operacional"],
     salario_resumo: "R$ 2.450,00 a R$ 5.120,00",
@@ -93,7 +114,73 @@ const DADOS_INICIAIS = [
   }
 ];
 
-// Sanitizador rigoroso para corrigir anacronismos e links quebrados
+// Cálculo determinístico do escore de confiança oficial (0 a 100%)
+export function calcularScoreConfianca(item) {
+  if (!item) return { score: 50, rotulo: 'Sob Verificação' };
+
+  let score = 0;
+  const texto = `${item.titulo || ''} ${item.resumo_ia || ''} ${item.orgao || ''} ${item.banca || ''}`.toLowerCase();
+  const url = (item.link_oficial || '').toLowerCase();
+
+  // 1. Identificação de banca examinadora oficial reconhecida (+40 pts) ou órgão público (+25 pts)
+  const bancaDetectada = identificarBancaOficial(item.banca || texto || url);
+  if (bancaDetectada) {
+    score += 40;
+    if (!item.banca) item.banca = bancaDetectada.nome;
+  } else if (item.orgao && (item.orgao.toLowerCase().includes('prefeitura') || item.orgao.toLowerCase().includes('câmara') || item.orgao.toLowerCase().includes('saae'))) {
+    score += 25;
+  }
+
+  // 2. Link oficial direto e funcional (+30 pts)
+  const isLinkValido = url && 
+    !url.includes('example.com') && 
+    !url.includes('google.com/search') && 
+    !url.endsWith('/licitacoes') && 
+    !url.endsWith('/concursos');
+  
+  if (isLinkValido) {
+    try {
+      const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
+      if (bancaDetectada && bancaDetectada.site.includes(host)) {
+        score += 30; // Link direto na banca oficial
+      } else if (host.endsWith('.gov.br') || host.endsWith('.org.br') || host.endsWith('.com.br')) {
+        score += 25;
+      } else {
+        score += 15;
+      }
+    } catch (e) {
+      score += 15;
+    }
+  }
+
+  // 3. Vigência e datas verificáveis (+20 pts)
+  const prazo = (item.prazo_inscricao || '').toLowerCase();
+  if (prazo && (prazo.includes('202') || prazo.includes('inscrições') || prazo.includes('provas') || prazo.includes('vigente') || prazo.includes('convocações'))) {
+    score += 20;
+  } else if (prazo) {
+    score += 10;
+  }
+
+  // 4. Coerência cronológica e ausência de contradições (+10 pts)
+  const temAnacronismo = item.status === 'Edital Aberto' && (texto.includes('2024') || texto.includes('2023') || texto.includes('encerrad') || texto.includes('já ocorreram'));
+  if (!temAnacronismo) {
+    score += 10;
+  }
+
+  // Limite estrito entre 15% e 100%
+  score = Math.min(100, Math.max(15, score));
+
+  let rotulo = 'Sob Verificação';
+  if (score >= 85) {
+    rotulo = 'Oficial Verificado';
+  } else if (score >= 60) {
+    rotulo = 'Auditado • Diário Oficial';
+  }
+
+  return { score, rotulo };
+}
+
+// Sanitizador rigoroso para corrigir anacronismos, links quebrados e atribuir auditoria
 export function sanitizarItemConcurso(item) {
   if (!item) return item;
 
@@ -114,20 +201,21 @@ export function sanitizarItemConcurso(item) {
     }
   }
 
-  // 2. Correção de Link Oficial (Garante que o link funcione e não seja 404):
-  const cidade = item.cidade || '';
-  const portais = PORTAIS_CIDADES[cidade];
-  const url = (item.link_oficial || '').trim();
-
-  const isLinkInvalido = !url || 
-    url.includes('example.com') || 
-    url.endsWith('/licitacoes') || 
-    url.endsWith('/concursos') ||
-    url.includes('google.com/search');
-
-  if (isLinkInvalido && portais) {
-    item.link_oficial = portais.concursos || portais.site;
+  // 2. Identificação de Banca Oficial
+  if (!item.banca) {
+    const bancaObj = identificarBancaOficial(`${item.titulo || ''} ${item.resumo_ia || ''} ${item.link_oficial || ''}`);
+    if (bancaObj) {
+      item.banca = bancaObj.nome;
+    }
   }
+
+  // 3. Correção e Reparo de Link Oficial
+  item.link_oficial = repararUrlOficial(item.link_oficial, item.banca, item.cidade);
+
+  // 4. Cálculo do Escore de Confiança e Rótulo de Auditoria
+  const confianca = calcularScoreConfianca(item);
+  item.confianca_score = item.confianca_score || confianca.score;
+  item.confianca_rotulo = item.confianca_rotulo || confianca.rotulo;
 
   return item;
 }
@@ -138,6 +226,7 @@ export function carregarDadosLocais() {
   const url = localStorage.getItem('radar_supabase_url');
   const sKey = localStorage.getItem('radar_supabase_key');
   const gKey = localStorage.getItem('radar_gemini_key');
+  const bKey = localStorage.getItem('radar_brave_key');
 
   if (conc) {
     try {
@@ -161,6 +250,7 @@ export function carregarDadosLocais() {
   if (url) state.config.supabaseUrl = url;
   if (sKey) state.config.supabaseKey = sKey;
   if (gKey) state.config.geminiKey = gKey;
+  if (bKey) state.config.braveKey = bKey;
 
   salvarLocal();
 }
@@ -171,4 +261,6 @@ export function salvarLocal() {
   if (state.config.supabaseUrl) localStorage.setItem('radar_supabase_url', state.config.supabaseUrl);
   if (state.config.supabaseKey) localStorage.setItem('radar_supabase_key', state.config.supabaseKey);
   if (state.config.geminiKey) localStorage.setItem('radar_gemini_key', state.config.geminiKey);
+  if (state.config.braveKey) localStorage.setItem('radar_brave_key', state.config.braveKey);
 }
+

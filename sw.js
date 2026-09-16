@@ -1,5 +1,5 @@
-// Service Worker — Radar de Concursos PWA (Padrão Casa do Sagrado v6)
-const CACHE_NAME = 'radar-concursos-v6';
+// Service Worker — Radar de Concursos PWA (Padrão Casa do Sagrado v7)
+const CACHE_NAME = 'radar-concursos-v7';
 
 const STATIC_ASSETS = [
   './',

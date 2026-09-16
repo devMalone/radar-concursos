@@ -1,9 +1,11 @@
-// js/consulta.js — Consulta Avulsa Instantânea com IA Gemini 3.6 Flash com Rigor Temporal
+// js/consulta.js — Pipeline Desacoplado: Fast Path (Auditado) vs Deep Path (Investigativo Web)
 
 import { state, salvarLocal, sanitizarItemConcurso } from './state.js';
 import { abrirModal, fecharModal, mostrarToast } from './utils.js';
 import { renderizarRadar } from './radar.js';
-import { PORTAIS_CIDADES } from './portais.js';
+import { PORTAIS_CIDADES, BANCAS_OFICIAIS } from './portais.js';
+
+let modoConsultaSelecionado = 'fast'; // 'fast' ou 'deep'
 
 export function abrirModalConsultaAvulsa() {
   const form = document.getElementById('consultaForm');
@@ -11,7 +13,36 @@ export function abrirModalConsultaAvulsa() {
   if (form) form.style.display = 'block';
   if (loading) loading.style.display = 'none';
 
+  setModoConsulta('fast');
   abrirModal('modalConsultaAvulsa');
+}
+
+export function setModoConsulta(modo) {
+  modoConsultaSelecionado = modo;
+  const btnFast = document.getElementById('btnModoFast');
+  const btnDeep = document.getElementById('btnModoDeep');
+  const btnAcao = document.getElementById('btnDispararConsulta');
+
+  if (btnFast && btnDeep) {
+    btnFast.classList.toggle('active', modo === 'fast');
+    btnDeep.classList.toggle('active', modo === 'deep');
+  }
+
+  if (btnAcao) {
+    if (modo === 'fast') {
+      btnAcao.innerHTML = `
+        <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+        <span>Consultar Base Auditada (Instantâneo)</span>
+      `;
+    } else {
+      btnAcao.innerHTML = `
+        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+        <span>Iniciar Varredura Profunda (Deep Scan)</span>
+      `;
+    }
+  }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 export async function executarConsultaAvulsaLive() {
@@ -20,13 +51,84 @@ export async function executarConsultaAvulsaLive() {
   
   const cidade = cidadeInput ? cidadeInput.value.trim() : '';
   const cargo = cargoInput ? cargoInput.value.trim() : '';
-  const apiKey = state.config.geminiKey;
 
   if (!cidade) {
     mostrarToast('Informe o município para a pesquisa.', 'error');
     return;
   }
 
+  if (modoConsultaSelecionado === 'fast') {
+    await executarFastPath(cidade, cargo);
+  } else {
+    await executarDeepPath(cidade, cargo);
+  }
+}
+
+// 1. FAST PATH: Consulta direta na base auditada sem custo de tokens e latência zero
+async function executarFastPath(cidade, cargo) {
+  const cidLower = cidade.toLowerCase();
+  const cargoLower = cargo.toLowerCase();
+
+  // Busca em cache local
+  const encontradosLocais = state.concursos.filter(c => {
+    const cCidade = (c.cidade || '').toLowerCase();
+    const matchCidade = cCidade.includes(cidLower) || cidLower.includes(cCidade);
+    if (!matchCidade) return false;
+
+    if (cargoLower) {
+      const texto = `${c.titulo} ${(c.cargos || []).join(' ')} ${(c.areas || []).join(' ')} ${c.resumo_ia || ''}`.toLowerCase();
+      return texto.includes(cargoLower);
+    }
+    return true;
+  });
+
+  if (encontradosLocais.length > 0) {
+    fecharModal('modalConsultaAvulsa');
+    state.filtroCidade = cidade;
+    const selectCidade = document.getElementById('selectCidade');
+    if (selectCidade) selectCidade.value = cidade;
+    renderizarRadar();
+    mostrarToast(`⚡ Fast Path: ${encontradosLocais.length} certame(s) auditado(s) localizado(s) instantaneamente!`, 'success');
+    return;
+  }
+
+  // Se não encontrado localmente e Supabase estiver conectado, tenta sincronizar
+  if (state.supabase) {
+    try {
+      mostrarToast('Buscando na base em nuvem auditada...', 'info');
+      const { data, error } = await state.supabase
+        .from('concursos')
+        .select('*')
+        .ilike('cidade', `%${cidade}%`);
+
+      if (!error && data && data.length > 0) {
+        data.forEach(inc => {
+          const idx = state.concursos.findIndex(c => c.id === inc.id);
+          if (idx >= 0) state.concursos[idx] = sanitizarItemConcurso(inc);
+          else state.concursos.unshift(sanitizarItemConcurso(inc));
+        });
+        salvarLocal();
+        state.filtroCidade = cidade;
+        const selectCidade = document.getElementById('selectCidade');
+        if (selectCidade) selectCidade.value = cidade;
+        renderizarRadar();
+        fecharModal('modalConsultaAvulsa');
+        mostrarToast(`⚡ Base auditada atualizada: ${data.length} certame(s) encontrado(s)!`, 'success');
+        return;
+      }
+    } catch (e) {
+      console.warn('[Fast Path Nuvem]', e);
+    }
+  }
+
+  // Se não há dados na base auditada, convida o usuário para a auditoria profunda
+  mostrarToast(`Nenhum certame registrado para ${cidade}. Alternando para Modo Auditoria Profunda...`, 'info');
+  setModoConsulta('deep');
+}
+
+// 2. DEEP PATH: Varredura investigativa na web com Gemini 3.6 Flash + Google Search Grounding
+async function executarDeepPath(cidade, cargo) {
+  const apiKey = state.config.geminiKey;
   if (!apiKey) {
     mostrarToast('Chave Gemini API não cadastrada. Insira na aba Ajustes.', 'error');
     return;
@@ -43,14 +145,19 @@ export async function executarConsultaAvulsaLive() {
 
   const portaisConhecidos = PORTAIS_CIDADES[cidade];
   const contextoPortal = portaisConhecidos 
-    ? `Portais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}`
+    ? `Portais oficiais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}`
     : '';
+
+  const bancasTexto = Object.values(BANCAS_OFICIAIS)
+    .map(b => `${b.nome} (${b.site})`)
+    .join(', ');
 
   const prompt = `Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
 Faça uma pesquisa rigorosa na web com o Google Search sobre concursos públicos, processos seletivos e contratação de bancas examinadoras para o município de: ${cidade} - SP.
 Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Segurança'}.
 
 ${contextoPortal}
+Bancas Oficiais Reconhecidas no Estado de SP: ${bancasTexto}.
 
 DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
 
@@ -79,14 +186,16 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
   {
     "cidade": "${cidade}",
     "orgao": "Ex: Prefeitura Municipal de ${cidade}",
+    "banca": "Ex: Fundação Vunesp, IBAM-SP, Instituto Consulplan ou Prefeitura",
     "titulo": "Título oficial e específico do concurso ou processo seletivo",
     "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
+    "fase_detalhada": "Ex: Inscrições Abertas até DD/MM OU Provas Realizadas • Fase de Recursos OU Convocação de Aprovados",
     "cargos": ["Cargo 1", "Cargo 2"],
     "areas": ["Administrativo", "Segurança", "Geral"],
     "salario_resumo": "Vencimento informado ou A consultar",
     "prazo_inscricao": "Ex: Inscrições abertas até DD/MM/AAAA OU Inscrições encerradas • Provas aplicadas",
     "link_oficial": "URL real verificada e funcional",
-    "resumo_ia": "Resumo analítico destacando a banca, a situação real de datas e o estágio atual do concurso."
+    "resumo_ia": "Resumo analítico destacando a banca examinadora, a situação real de datas e o estágio atual do certame."
   }
 ]`;
 
@@ -117,7 +226,7 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
       const parsedItems = JSON.parse(clean.substring(sIdx, eIdx + 1));
       if (parsedItems.length > 0) {
         parsedItems.forEach(rawItem => {
-          // Passa pelo filtro sanitizador rigoroso
+          // Passa pelo filtro sanitizador rigoroso com escore e reparo de links
           const item = sanitizarItemConcurso(rawItem);
           item.id = `avulso_${cidade}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
           item.updated_at = new Date().toISOString();
@@ -134,16 +243,17 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
         salvarLocal();
         renderizarRadar();
         fecharModal('modalConsultaAvulsa');
-        mostrarToast(`Pesquisa concluída: ${parsedItems.length} certame(s) verificado(s)!`, 'success');
+        mostrarToast(`🔬 Deep Scan: ${parsedItems.length} certame(s) auditado(s) com sucesso!`, 'success');
         return;
       }
     }
     
     fecharModal('modalConsultaAvulsa');
-    mostrarToast('Varredura concluída. Nenhuma novidade recente encontrada para este critério.', 'info');
+    mostrarToast('Varredura concluída. Nenhuma publicação recente localizada para este critério.', 'info');
   } catch (err) {
-    console.warn('[Consulta Avulsa] Erro:', err);
+    console.warn('[Deep Scan] Erro:', err);
     fecharModal('modalConsultaAvulsa');
     mostrarToast('Falha na comunicação com o Gemini. Verifique a chave ou tente em instantes.', 'error');
   }
 }
+

@@ -112,10 +112,11 @@ export async function testarConexaoSupabase(url, key) {
   }
 }
 
-export function salvarConfiguracoes(url, key, geminiKey) {
+export function salvarConfiguracoes(url, key, geminiKey, braveKey) {
   state.config.supabaseUrl = url;
   state.config.supabaseKey = key;
   state.config.geminiKey = geminiKey;
+  state.config.braveKey = braveKey || '';
 
   salvarLocal();
   iniciarSupabase();

@@ -34,6 +34,65 @@ CIDADES_MONITORADAS = [
     "José Bonifácio"
 ]
 
+BANCAS_OFICIAIS = {
+    "vunesp": {"nome": "Fundação Vunesp", "sigla": "Vunesp", "site": "https://www.vunesp.com.br"},
+    "ibam": {"nome": "IBAM Concursos", "sigla": "IBAM-SP", "site": "https://www.ibamsp-concursos.org.br/site/"},
+    "consulplan": {"nome": "Instituto Consulplan", "sigla": "Consulplan", "site": "https://concurso4.institutoconsulplan.org.br"},
+    "consesp": {"nome": "Consesp Concursos", "sigla": "Consesp", "site": "https://www.consesp.com.br"},
+    "avanca": {"nome": "Avança SP", "sigla": "Avança SP", "site": "https://www.avancasp.org.br"},
+    "fcc": {"nome": "Fundação Carlos Chagas", "sigla": "FCC", "site": "https://www.concursosfcc.com.br"},
+    "cebraspe": {"nome": "Cebraspe", "sigla": "Cebraspe", "site": "https://www.cebraspe.org.br"},
+    "instituto mais": {"nome": "Instituto Mais", "sigla": "Inst. Mais", "site": "https://www.institutomais.org.br"},
+}
+
+def identificar_banca(texto):
+    if not texto:
+        return None
+    t = texto.lower()
+    for chave, banca in BANCAS_OFICIAIS.items():
+        if chave in t or banca["sigla"].lower() in t or banca["nome"].lower() in t:
+            return banca
+    return None
+
+def calcular_score_confianca(item):
+    if not item:
+        return 50, "Sob Verificação"
+    
+    score = 0
+    texto = f"{item.get('titulo', '')} {item.get('resumo_ia', '')} {item.get('orgao', '')} {item.get('banca', '')}".lower()
+    url = (item.get('link_oficial') or '').lower()
+    
+    banca = identificar_banca(item.get("banca") or texto or url)
+    if banca:
+        score += 40
+        if not item.get("banca"):
+            item["banca"] = banca["nome"]
+    elif any(w in texto for w in ["prefeitura", "câmara", "saae"]):
+        score += 25
+        
+    is_link_valido = url and "example.com" not in url and not url.endswith("/licitacoes") and not url.endswith("/concursos")
+    if is_link_valido:
+        if banca and banca["site"] in url:
+            score += 30
+        elif ".gov.br" in url or ".org.br" in url or ".com.br" in url:
+            score += 25
+        else:
+            score += 15
+            
+    prazo = (item.get("prazo_inscricao") or "").lower()
+    if prazo and any(w in prazo for w in ["202", "inscrições", "provas", "vigente", "convocações"]):
+        score += 20
+    elif prazo:
+        score += 10
+        
+    tem_anacronismo = item.get("status") == "Edital Aberto" and any(w in texto for w in ["2024", "2023", "encerrad", "já ocorreram"])
+    if not tem_anacronismo:
+        score += 10
+        
+    score = min(100, max(15, score))
+    rotulo = "Oficial Verificado" if score >= 85 else ("Auditado • Diário Oficial" if score >= 60 else "Sob Verificação")
+    return score, rotulo
+
 def log(msg):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
 
@@ -44,11 +103,15 @@ def consultar_gemini_com_busca():
     ano_atual = datetime.now().year
     cidades_str = ", ".join(CIDADES_MONITORADAS)
     
+    bancas_prompt = ", ".join([f"{b['nome']} ({b['site']})" for b in BANCAS_OFICIAIS.values()])
+    
     data_hoje_str = datetime.now().strftime('%d/%m/%Y')
     prompt = f"""
 Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
 Faça uma pesquisa rigorosa na web com o Google Search para identificar concursos públicos, processos seletivos e licitações de contratação de bancas organizadoras para os seguintes municípios da região de São José do Rio Preto / Catanduva - SP:
 {cidades_str}
+
+Bancas Examinadoras Oficiais Reconhecidas em SP: {bancas_prompt}
 
 DATA EXATA DE REFERÊNCIA HOJE: {data_hoje_str} (Ano atual: {ano_atual}).
 
@@ -74,8 +137,10 @@ Retorne EXCLUSIVAMENTE um array JSON:
   {{
     "cidade": "Nome da Cidade",
     "orgao": "Ex: Prefeitura Municipal de Catanduva",
+    "banca": "Ex: Fundação Vunesp, IBAM-SP, Instituto Consulplan ou Prefeitura",
     "titulo": "Título oficial e específico do concurso ou processo seletivo",
     "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
+    "fase_detalhada": "Ex: Inscrições Abertas até DD/MM OU Fase de Recursos • Gabarito Preliminar OU Homologado • Nomeações",
     "cargos": ["Cargo 1", "Cargo 2"],
     "areas": ["Administrativo", "Licitações", "Educação", "Segurança"],
     "salario_resumo": "Ex: R$ 2.400 a R$ 6.800",
@@ -233,14 +298,23 @@ def executar_scanner():
         c_id = normalizar_id(c.get("cidade", ""), c.get("orgao", ""), c.get("titulo", ""))
         status_atual = c.get("status", "Previsto")
         
+        # Auditoria e cálculo do score de confiança
+        score, rotulo = calcular_score_confianca(c)
+        banca_detectada = identificar_banca(c.get("banca") or c.get("titulo", "") + " " + c.get("resumo_ia", "") + " " + c.get("link_oficial", ""))
+        banca_nome = c.get("banca") or (banca_detectada["nome"] if banca_detectada else "")
+
         item_banco = banco_existente.get(c_id)
         
         c_payload = {
             "id": c_id,
             "cidade": c.get("cidade", "Interior SP"),
             "orgao": c.get("orgao", "Prefeitura"),
+            "banca": banca_nome,
             "titulo": c.get("titulo", "Concurso Público"),
             "status": status_atual,
+            "fase_detalhada": c.get("fase_detalhada", ""),
+            "confianca_score": score,
+            "confianca_rotulo": rotulo,
             "cargos": c.get("cargos", []),
             "areas": c.get("areas", ["Geral"]),
             "salario_resumo": c.get("salario_resumo", "A consultar"),
@@ -254,7 +328,7 @@ def executar_scanner():
             c_payload["created_at"] = now_iso
             salvar_concurso_supabase(c_payload)
             novos += 1
-            log(f"🌟 NOVO CONCURSO: [{c_payload['cidade']}] {c_payload['titulo']} ({c_payload['status']})")
+            log(f"🌟 NOVO CONCURSO: [{c_payload['cidade']}] {c_payload['titulo']} ({c_payload['status']} • {c_payload['confianca_score']}% {c_payload['confianca_rotulo']} • {banca_nome or 'Sem banca'})")
         elif item_banco.get("status") != status_atual:
             salvar_concurso_supabase(c_payload)
             atualizados += 1

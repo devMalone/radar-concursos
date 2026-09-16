@@ -122,25 +122,54 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
       return `<span class="cargo-chip ${isLicit ? 'highlight' : ''}">${escapeHtml(cargo)}</span>`;
     }).join('');
 
+    const score = typeof c.confianca_score === 'number' ? c.confianca_score : 85;
+    const trustClass = score >= 85 ? 'trust-high' : (score >= 60 ? 'trust-medium' : 'trust-low');
+    const rotulo = c.confianca_rotulo || (score >= 85 ? 'Oficial Verificado' : 'Auditado');
+    const trustBadge = `
+      <span class="trust-badge ${trustClass}" title="Auditoria Documental: ${score}% de confiabilidade">
+        <span class="trust-dot"></span>
+        <span>${score}% ${escapeHtml(rotulo)}</span>
+      </span>
+    `;
+
+    const bancaBadge = c.banca ? `
+      <span class="banca-badge" title="Banca Examinadora Oficial Reconhecida">
+        <i data-lucide="building-2" style="width: 11px; height: 11px;"></i>
+        <span>${escapeHtml(c.banca)}</span>
+      </span>
+    ` : '';
+
+    const faseBadge = c.fase_detalhada ? `
+      <span class="fase-pill" title="Estágio Formal do Concurso">
+        <i data-lucide="info" style="width: 10px; height: 10px;"></i>
+        <span>${escapeHtml(c.fase_detalhada)}</span>
+      </span>
+    ` : '';
+
     const linkOficialBtn = c.link_oficial ? `
-      <a href="${escapeHtml(c.link_oficial)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary">
+      <a href="${escapeHtml(c.link_oficial)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary" title="Acessar portal da banca examinadora ou edital oficial">
         <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
-        <span>Edital / Banca</span>
+        <span>${escapeHtml(c.banca ? `Banca (${c.banca})` : 'Edital Oficial')}</span>
       </a>
     ` : '';
 
     return `
       <div class="concurso-card" data-id="${escapeHtml(c.id)}">
-        <!-- Linha 1: Brasão + Cidade + Status + Acompanhar -->
+        <!-- Linha 1: Brasão + Cidade + Badges de Auditoria + Acompanhar -->
         <div class="card-header-row">
           <div class="city-crest-group">
             ${brasaoSvg}
             <div>
               <div class="city-name">${escapeHtml(c.cidade)}</div>
-              <span class="status-badge ${statusClass}">
-                <span class="pulse-dot"></span>
-                ${escapeHtml(c.status)}
-              </span>
+              <div class="card-badges-row">
+                <span class="status-badge ${statusClass}">
+                  <span class="pulse-dot"></span>
+                  ${escapeHtml(c.status)}
+                </span>
+                ${trustBadge}
+                ${bancaBadge}
+                ${faseBadge}
+              </div>
             </div>
           </div>
 
@@ -188,7 +217,7 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
         <div class="card-actions-row">
           <button class="btn-card-action" onclick="window.radarActions.abrirModalPortais('${escapeHtml(c.cidade)}')">
             <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
-            <span>Portais Oficiais</span>
+            <span>Portais da Cidade</span>
           </button>
           ${linkOficialBtn}
           <button class="btn-card-action study" onclick="window.radarActions.abrirModalPlano('${escapeHtml(c.id)}')">

@@ -248,7 +248,40 @@
             </div>
           </div>
 
-          <button class="btn-modal-main" id="btnSalvarConfig" style="margin-top: 4px;">
+          <!-- Card Brave Search (Multi-Engine Opcional) -->
+          <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="compass" style="width: 15px; height: 15px; color: #f97316;"></i>
+                <span style="font-weight: 700; font-size: 13px;">Brave Search API (Opcional)</span>
+              </div>
+              <span class="status-badge status-licit" style="font-size: 9px;">Multi-Engine</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.35; margin-bottom: 8px;">
+              Motor secundário independente com 5.000 buscas gratuitas/mês e filtro de recência (<code style="color: #93c5fd;">freshness</code>) para fontes oficiais.
+            </p>
+            <div class="api-key-wrap">
+              <input 
+                type="text" 
+                class="form-input api-key-input" 
+                id="cfgBraveKey" 
+                name="brave_search_api_token"
+                placeholder="Cole sua Brave Search API Key..."
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
+              >
+              <button type="button" class="btn-toggle-key" onclick="window.radarActions.toggleMostrarChave('cfgBraveKey', this)" title="Mostrar/Ocultar chave">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-modal-main" id="btnSalvarConfig" style="margin-top: 14px;">
             <i data-lucide="save" style="width: 16px; height: 16px;"></i>
             <span>Salvar Configurações</span>
           </button>
@@ -319,9 +352,23 @@
       </div>
 
       <div class="modal-body" id="consultaForm">
-        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
-          Dispare uma varredura com o <strong>Gemini 3.6 Flash</strong> conectada ao Google Search para buscar novidades e licitações recentes.
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
+          Selecione o modo de consulta: verificação instantânea na base auditada sem custo ou auditoria profunda na web.
         </p>
+
+        <!-- Seletor de Modo: Fast Path vs Deep Scan -->
+        <div class="mode-selector">
+          <button type="button" class="mode-btn active" id="btnModoFast" onclick="window.radarActions.setModoConsulta('fast')">
+            <i data-lucide="zap" style="width: 16px; height: 16px; color: #f59e0b;"></i>
+            <span>Base Auditada</span>
+            <small>Instantâneo (0 tokens)</small>
+          </button>
+          <button type="button" class="mode-btn" id="btnModoDeep" onclick="window.radarActions.setModoConsulta('deep')">
+            <i data-lucide="sparkles" style="width: 16px; height: 16px; color: #60a5fa;"></i>
+            <span>Deep Scan Web</span>
+            <small>Gemini + Google Search</small>
+          </button>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="avulsoCidade">Município de Interesse</label>
@@ -359,9 +406,9 @@
           >
         </div>
 
-        <button class="btn-modal-main" style="margin-top: 4px;" onclick="window.radarActions.executarConsultaAvulsaLive()">
-          <i data-lucide="radar" style="width: 16px; height: 16px;"></i>
-          <span>Iniciar Varredura Imediata</span>
+        <button class="btn-modal-main" id="btnDispararConsulta" style="margin-top: 4px;" onclick="window.radarActions.executarConsultaAvulsaLive()">
+          <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+          <span>Consultar Base Auditada (Instantâneo)</span>
         </button>
       </div>
 

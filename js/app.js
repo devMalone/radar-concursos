@@ -21,7 +21,8 @@ import {
 } from './portais.js';
 import { 
   abrirModalConsultaAvulsa, 
-  executarConsultaAvulsaLive 
+  executarConsultaAvulsaLive,
+  setModoConsulta
 } from './consulta.js';
 import { 
   iniciarSupabase, 
@@ -39,6 +40,7 @@ window.radarActions = {
   abrirModalPortais,
   abrirModalConsultaAvulsa,
   executarConsultaAvulsaLive,
+  setModoConsulta,
   fecharModal,
   fecharModalAtual,
   sincronizarSupabase,
@@ -99,10 +101,12 @@ function carregarInputsConfiguracoes() {
   const urlEl = document.getElementById('cfgSupabaseUrl');
   const keyEl = document.getElementById('cfgSupabaseKey');
   const geminiEl = document.getElementById('cfgGeminiKey');
+  const braveEl = document.getElementById('cfgBraveKey');
 
   if (urlEl) urlEl.value = state.config.supabaseUrl || '';
   if (keyEl) keyEl.value = state.config.supabaseKey || '';
   if (geminiEl) geminiEl.value = state.config.geminiKey || '';
+  if (braveEl) braveEl.value = state.config.braveKey || '';
 }
 
 // ================= BOTÃO VOLTAR DO ANDROID (POPSTATE) =================
@@ -253,7 +257,9 @@ function configurarEventosInterface() {
       const url = document.getElementById('cfgSupabaseUrl').value.trim();
       const key = document.getElementById('cfgSupabaseKey').value.trim();
       const gemini = document.getElementById('cfgGeminiKey').value.trim();
-      salvarConfiguracoes(url, key, gemini);
+      const braveEl = document.getElementById('cfgBraveKey');
+      const brave = braveEl ? braveEl.value.trim() : '';
+      salvarConfiguracoes(url, key, gemini, brave);
     });
   }
 
