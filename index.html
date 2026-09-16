@@ -58,6 +58,10 @@
       --status-canc: #f43f5e;
       --status-canc-bg: rgba(244, 63, 94, 0.12);
       --status-canc-border: rgba(244, 63, 94, 0.28);
+      
+      --status-andamento: #818cf8;
+      --status-andamento-bg: rgba(99, 102, 241, 0.14);
+      --status-andamento-border: rgba(99, 102, 241, 0.35);
 
       --radius-sm: 6px;
       --radius-md: 10px;
@@ -497,6 +501,12 @@
       background: var(--status-canc-bg);
       color: var(--status-canc);
       border: 1px solid var(--status-canc-border);
+    }
+
+    .status-badge.status-andamento {
+      background: var(--status-andamento-bg);
+      color: var(--status-andamento);
+      border: 1px solid var(--status-andamento-border);
     }
 
     .pulse-dot {
@@ -1072,6 +1082,9 @@
         <button class="tab-btn" data-filter="Previsto" onclick="setTabFiltro('Previsto')">
           <i data-lucide="clock" style="width: 14px; height: 14px;"></i> Previstos
         </button>
+        <button class="tab-btn" data-filter="andamento" onclick="setTabFiltro('andamento')">
+          <i data-lucide="hourglass" style="width: 14px; height: 14px;"></i> Em Andamento / Recursos
+        </button>
         <button class="tab-btn" data-filter="Cancelado / Suspenso" onclick="setTabFiltro('Cancelado / Suspenso')">
           <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Cancelados
         </button>
@@ -1256,9 +1269,9 @@
       },
       "Potirendaba": {
         site: "https://www.potirendaba.sp.gov.br",
-        diario: "https://www.potirendaba.sp.gov.br/diario-oficial-eletronico",
-        concursos: "https://www.potirendaba.sp.gov.br/concursos",
-        licitacoes: "https://www.potirendaba.sp.gov.br/licitacoes"
+        diario: "https://www.potirendaba.sp.gov.br/portal/diario-oficial",
+        concursos: "https://www.potirendaba.sp.gov.br/portal/servicos/202/concursos-publicos/",
+        licitacoes: "https://transparencia.potirendaba.sp.gov.br:879/comprasedital/"
       },
       "Cedral": {
         site: "https://www.cedral.sp.gov.br",
@@ -1425,17 +1438,17 @@
         updated_at: new Date().toISOString()
       },
       {
-        id: "potirendaba_prefeitura_licitacao_banca",
+        id: "potirendaba_concurso_001_2026",
         cidade: "Potirendaba",
-        orgao: "Prefeitura de Potirendaba",
-        titulo: "Processo Licitatório para Contratação de Banca Examinadora",
-        status: "Licitação",
-        cargos: ["Agente de Trânsito", "Secretário de Escola", "Auxiliar de Serviços Gerais", "Motorista"],
-        areas: ["Geral", "Educação", "Segurança"],
-        salario_resumo: "R$ 2.100,00 a R$ 4.900,00",
-        prazo_inscricao: "Fase de licitação / Pregão de contratação de banca",
-        link_oficial: "https://www.potirendaba.sp.gov.br/licitacoes",
-        resumo_ia: "Abertura de certame para definir a banca examinadora do próximo concurso para preenchimento de quadro efetivo.",
+        orgao: "Prefeitura Municipal de Potirendaba",
+        titulo: "Concurso Público 001/2026 — Quadro Geral e Específico",
+        status: "Em Andamento (Recursos / Gabarito)",
+        cargos: ["Assistente de Licitação", "Agente Administrativo", "Secretário de Escola", "Agente de Trânsito", "Fiscal de Tributos"],
+        areas: ["Administrativo", "Licitações", "Educação", "Segurança"],
+        salario_resumo: "R$ 2.150,00 a R$ 5.400,00",
+        prazo_inscricao: "Inscrições encerradas • Provas aplicadas • Fase de Recursos e Gabaritos",
+        link_oficial: "https://www.potirendaba.sp.gov.br/portal/servicos/1053/concurso-publico-0012026/",
+        resumo_ia: "Certame organizado pelo Instituto Consulplan. As provas objetivas já foram aplicadas; certame atualmente na fase de divulgação de gabaritos preliminares e interposição de recursos dos candidatos.",
         updated_at: new Date().toISOString()
       },
       {
@@ -1661,8 +1674,11 @@
 
         if (state.filtroTab === 'acompanhados') {
           return state.acompanhados.includes(c.id);
+        } else if (state.filtroTab === 'andamento') {
+          const s = (c.status || '').toLowerCase();
+          return s.includes('andamento') || s.includes('recurso') || s.includes('resultado') || s.includes('gabarito') || s.includes('encerrad');
         } else if (state.filtroTab !== 'todos') {
-          return c.status === state.filtroTab;
+          return (c.status || '').toLowerCase().includes((state.filtroTab || '').toLowerCase());
         }
 
         return true;
@@ -1677,8 +1693,8 @@
 
     function renderizarMetricas() {
       const total = state.concursos.length;
-      const abertos = state.concursos.filter(c => c.status === 'Edital Aberto').length;
-      const licit = state.concursos.filter(c => c.status === 'Licitação').length;
+      const abertos = state.concursos.filter(c => (c.status || '').toLowerCase().includes('aberto')).length;
+      const licit = state.concursos.filter(c => (c.status || '').toLowerCase().includes('licita')).length;
       const track = state.acompanhados.length;
 
       document.getElementById('statTotal').innerText = total;
@@ -1688,13 +1704,13 @@
     }
 
     function getStatusBadgeClass(status) {
-      switch(status) {
-        case 'Edital Aberto': return 'status-aberto';
-        case 'Licitação': return 'status-licit';
-        case 'Previsto': return 'status-prev';
-        case 'Cancelado / Suspenso': return 'status-canc';
-        default: return 'status-prev';
-      }
+      const s = (status || '').toLowerCase();
+      if (s.includes('aberto')) return 'status-aberto';
+      if (s.includes('licita')) return 'status-licit';
+      if (s.includes('previsto')) return 'status-prev';
+      if (s.includes('canc') || s.includes('susp')) return 'status-canc';
+      if (s.includes('andamento') || s.includes('recurso') || s.includes('resultado') || s.includes('gabarito') || s.includes('encerrad')) return 'status-andamento';
+      return 'status-prev';
     }
 
     function renderizarLista() {
@@ -1995,23 +2011,34 @@
       document.getElementById('consultaForm').style.display = 'none';
       document.getElementById('consultaLoading').style.display = 'flex';
 
-      const prompt = `Você é um robô de busca de concursos públicos e licitações no estado de São Paulo.
-Faça uma pesquisa profunda e atualizada na web sobre concursos públicos, processos seletivos e licitações para contratação de banca organizadora no município de ${cidade} - SP, com atenção especial ao cargo ou área: ${cargo}.
+      const prompt = `Você é um especialista em monitoramento de concursos públicos e licitações no estado de São Paulo.
+Faça uma pesquisa profunda e atualizada na web sobre concursos públicos, processos seletivos e licitações de bancas organizadoras no município de ${cidade} - SP, com foco em: ${cargo}.
 Ano de referência: ${new Date().getFullYear()} ou meses recentes.
 
-Retorne EXCLUSIVAMENTE um array JSON puro (sem markdown ou texto ao redor):
+REGRAS DE STATUS OBRIGATÓRIAS:
+- "Edital Aberto": use APENAS se as inscrições estiverem ABERTAS hoje e o candidato ainda puder se inscrever.
+- "Em Andamento (Recursos / Gabarito)": use se as inscrições já fecharam, ou se as provas já foram realizadas e está em fase de gabarito preliminar, recursos ou resultados.
+- "Licitação": use quando a prefeitura estiver contratando a banca examinadora (pregão ou dispensa).
+- "Previsto": use para concurso anunciado sem edital publicado.
+- "Cancelado / Suspenso": se foi suspenso ou cancelado.
+
+REGRAS DE LINKS OBRIGATÓRIAS:
+- NUNCA invente URLs falsas ou rotas genéricas (/licitacoes ou /concursos) se você não as viu comprovadamente na busca.
+- Retorne apenas links reais verificados da banca examinadora (ex: consulplan, vunesp) ou a página real de serviços do município, ou o domínio oficial raiz.
+
+Retorne EXCLUSIVAMENTE um array JSON puro:
 [
   {
     "cidade": "${cidade}",
-    "orgao": "Nome do órgão (ex: Prefeitura de ${cidade} ou SAAE)",
-    "titulo": "Título do concurso, edital ou licitação",
-    "status": "Edital Aberto" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
+    "orgao": "Nome do órgão (ex: Prefeitura de ${cidade})",
+    "titulo": "Título oficial do concurso ou licitação",
+    "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
     "cargos": ["Cargo 1", "Cargo 2"],
     "areas": ["Administrativo", "Licitações", "Geral"],
     "salario_resumo": "Vencimento informado ou A consultar",
-    "prazo_inscricao": "Prazo de inscrição ou Em andamento",
-    "link_oficial": "URL verificada ou portal oficial",
-    "resumo_ia": "Resumo de 2 a 3 linhas informando as novidades da pesquisa."
+    "prazo_inscricao": "Status das inscrições e provas (ex: Provas realizadas • Recursos abertos)",
+    "link_oficial": "URL oficial real verificada",
+    "resumo_ia": "Resumo objetivo explicando o momento exato do certame."
   }
 ]`;
 

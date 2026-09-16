@@ -53,28 +53,39 @@ Ano de referência: {ano_atual} ou notícias recentes dos últimos meses.
 
 Procure por:
 1. Editais com inscrições abertas ou prestes a abrir (Prefeituras, Câmaras, Autarquias, SAAE).
-2. Licitações para contratação de banca organizadora (Vunesp, IBAM, Avança SP, Consesp, etc.) que indicam concurso previsto.
-3. Notícias de concursos anunciados ou previstos pelas administrações municipais.
-4. Notícias de concursos que foram suspensos, adiados ou cancelados recentemente.
+2. Licitações para contratação de banca organizadora (Vunesp, IBAM, Avança SP, Consesp, Instituto Consulplan, etc.) que indicam concurso previsto.
+3. Concursos em andamento onde as provas já aconteceram ou as inscrições se encerraram e o certame está em fase de gabaritos, recursos ou resultados.
+4. Notícias de concursos anunciados ou com comissão formada pelas administrações municipais.
+5. Notícias de concursos que foram suspensos, adiados ou cancelados recentemente.
 
-Retorne EXCLUSIVAMENTE um array JSON (sem blocos de código markdown desnecessários, apenas o JSON puro) com a lista de concursos encontrados no seguinte formato para cada item:
+REGRAS OBRIGATÓRIAS DE STATUS:
+- "Edital Aberto": use EXCLUSIVAMENTE se as inscrições estiverem abertas hoje e o candidato ainda puder se inscrever.
+- "Em Andamento (Recursos / Resultados)": use se as inscrições já fecharam, se as provas já foram aplicadas ou se está em fase de gabarito preliminar, recursos ou convocação de aprovados. NUNCA classifique como "Edital Aberto" se as inscrições já encerraram!
+- "Licitação": use quando a prefeitura está contratando a banca examinadora (pregão, dispensa ou aviso de contratação).
+- "Previsto": use para comissões formadas ou concursos anunciados sem edital ainda.
+- "Cancelado / Suspenso": para certames suspensos por decisões judiciais ou revogados pelo município.
+
+REGRAS OBRIGATÓRIAS DE LINKS:
+- NUNCA invente rotas ou URLs genéricas fictícias como /licitacoes ou /concursos se você não verificou que ela existe de fato.
+- Retorne APENAS a URL real exata verificada na busca (ex: página da banca examinadora como consulplan.org.br ou vunesp.com.br, ou a página real de serviços do município). Se não tiver o link exato da página interna, forneça o domínio oficial principal da prefeitura (ex: https://www.potirendaba.sp.gov.br).
+
+Retorne EXCLUSIVAMENTE um array JSON (sem blocos de texto ou markdown desnecessários):
 [
   {{
     "cidade": "Nome da Cidade",
-    "orgao": "Ex: Prefeitura Municipal de Catanduva",
-    "titulo": "Ex: Concurso Público 01/{ano_atual} ou Processo Seletivo",
-    "status": "Edital Aberto" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
+    "orgao": "Ex: Prefeitura Municipal de Potirendaba",
+    "titulo": "Ex: Concurso Público 001/{ano_atual}",
+    "status": "Edital Aberto" OU "Em Andamento (Recursos / Resultados)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
     "cargos": ["Cargo 1", "Cargo 2", "Agente de Licitações"],
     "areas": ["Administrativo", "Licitações", "Educação", "Saúde", "Geral"],
     "salario_resumo": "Ex: R$ 2.400 a R$ 6.800",
-    "prazo_inscricao": "Ex: 10/10 a 28/10/{ano_atual} ou A definir",
-    "link_oficial": "URL oficial da banca, edital ou portal de notícias verificado",
-    "resumo_ia": "Resumo de 2 a 3 linhas explicando o que é, quantidades de vagas e se há cargos da área administrativa/licitações/geral."
+    "prazo_inscricao": "Ex: Provas realizadas • Fase de Recursos e Gabaritos ou Inscrições até DD/MM",
+    "link_oficial": "URL oficial verificada da banca ou do portal",
+    "resumo_ia": "Resumo de 2 a 3 linhas explicando o momento atual do certame (ex: banca organizadora, se provas já ocorreram, se há recursos abertos, etc.)."
   }}
 ]
 
 Atenção especial para cargos da área de Licitações, Compras, Administrativo, Agente de Trânsito, Fiscal e TI.
-Se não encontrar novidades para alguma cidade, liste as cidades onde encontrou movimentações reais.
 """
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
