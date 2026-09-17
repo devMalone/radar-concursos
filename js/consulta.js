@@ -77,69 +77,65 @@ export async function executarConsultaAvulsaLive() {
     .map(b => `${b.nome} (${b.site})`)
     .join(', ');
 
-  const prompt = `Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
-Faça uma pesquisa rigorosa na web com o Google Search sobre concursos públicos, processos seletivos e contratação de bancas examinadoras para o município de: ${cidade} - SP.
-Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Saúde / Educação'}.
+  const focoTexto = cargo 
+    ? `Foco de interesse informado pelo usuário: ${cargo}.`
+    : `Foco de interesse: Geral (Prefeitura, Educação, Saúde, Administração, Guarda Civil e Autarquias).`;
+
+  const prompt = `Você é um especialista em concursos públicos do estado de São Paulo.
+Pesquise na web com o Google Search sobre concursos públicos, processos seletivos e convocações da Prefeitura Municipal de ${cidade} - SP e órgãos públicos locais.
+${focoTexto}
 
 ${contextoPortal}
-Bancas Oficiais Reconhecidas no Estado de SP: ${bancasTexto}.
+Principais bancas examinadoras de SP: ${bancasTexto}.
 
-DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
+DIRETRIZES DE PESQUISA:
+1. Busque editais da Prefeitura Municipal de ${cidade}, Câmara Municipal, autarquias municipais (como DAE, SEMAE, SAAE, EMURB) e na banca Fundação Vunesp ou IBAM.
+2. Identifique e traga certames com:
+   - Inscrições Abertas ou com edital publicado
+   - Em Andamento (provas aplicadas, gabaritos, fase de recursos, homologação ou convocações de aprovados do cadastro de reserva)
+   - Processos Seletivos Simplificados
+   - Licitações abertas para contratação de banca organizadora
+3. Se houver concurso vigente com convocações ou recursos em andamento, inclua-o com status "Em Andamento (Recursos / Gabarito)".
+4. Forneça links oficiais funcionais (página da banca organizadora ou portal oficial de concursos da prefeitura: ${portaisConhecidos ? portaisConhecidos.concursos : 'site do município'}).
 
-⚠️ DIRETRIZES DE AUDITORIA PÚBLICA E ANTI-ALUCINAÇÃO (MÁXIMA RIGIDEZ):
-1. VIGÊNCIA DE CONCURSOS E CADASTRO DE RESERVA (CF/88 art. 37):
-   - Concursos homologados possuem validade legal de 2 anos (prorrogáveis por mais 2).
-   - Enquanto um concurso estiver vigente ou em etapas de chamamento de aprovados, relate a realidade documental.
-   - NUNCA invente certames "Previstos" sem portaria de comissão organizadora formal ou autorização do Prefeito publicada em Diário Oficial.
-   - Se houver concurso vigente com convocações em andamento, informe o status exato.
-
-2. VERIFICAÇÃO RIGOROSA DO STATUS:
-   - "Edital Aberto": EXCLUSIVO para certames onde as inscrições estejam formalmente abertas HOJE para novos candidatos (data limite >= ${hojeStr}).
-   - "Em Andamento (Recursos / Gabarito)": Certames cujas inscrições fecharam ou provas foram aplicadas, e estão em fase de recursos, gabaritos, homologação ou convocações.
-   - "Licitação": Quando o município abriu processo formal no Diário Oficial para contratar banca examinadora.
-   - "Previsto": SOMENTE com ato oficial publicado em Diário Oficial.
-   - "Cancelado / Suspenso": Certames com atos suspensos ou revogados.
-
-3. REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
-   - Retorne links REAIS e que funcionem ao clicar:
-     - O link oficial da banca organizadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br, etc.)
-     - OU o portal oficial de concursos/serviços da prefeitura.
-   - NUNCA invente rotas falsas (como /licitacoes, /concursos-2024) que geram tela 404.
-
-Retorne EXCLUSIVAMENTE um array JSON puro iniciando com '[' e terminando com ']'.
-NÃO escreva introduções, explicações, saudações nem notas com marcadores de rodapé [1].
-Se não houver certames recentes, retorne exatamente:
-[]
+FORMATO DE RESPOSTA:
+Retorne EXCLUSIVAMENTE um bloco markdown com array JSON com todos os certames localizados:
+\`\`\`json
 [
   {
     "cidade": "${cidade}",
-    "orgao": "Ex: Prefeitura Municipal de ${cidade}",
-    "banca": "Ex: Fundação Vunesp, IBAM-SP, Instituto Consulplan ou Prefeitura",
-    "titulo": "Título oficial e específico do concurso ou processo seletivo",
-    "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto" OU "Cancelado / Suspenso",
-    "fase_detalhada": "Ex: Inscrições Abertas até DD/MM OU Provas Realizadas • Fase de Recursos OU Convocação de Aprovados",
-    "cargos": ["Cargo 1", "Cargo 2"],
-    "areas": ["Administrativo", "Segurança", "Geral"],
-    "salario_resumo": "Vencimento informado ou A consultar",
-    "prazo_inscricao": "Ex: Inscrições abertas até DD/MM/AAAA OU Inscrições encerradas • Provas aplicadas",
-    "link_oficial": "URL real verificada e funcional",
-    "resumo_ia": "Resumo analítico destacando a banca examinadora, a situação real de datas e o estágio atual do certame."
+    "orgao": "Prefeitura Municipal de ${cidade}",
+    "banca": "Fundação Vunesp (ou banca organizadora)",
+    "titulo": "Nome oficial do concurso ou processo seletivo",
+    "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto",
+    "fase_detalhada": "Fase detalhada (ex: Inscrições Abertas até DD/MM OU Convocações de Aprovados OU Fase de Recursos)",
+    "cargos": ["Lista dos principais cargos"],
+    "areas": ["Administrativo", "Educação", "Geral"],
+    "salario_resumo": "Ex: R$ 3.000 a R$ 7.000 ou A consultar",
+    "prazo_inscricao": "Informação sobre datas e inscrições",
+    "link_oficial": "${portaisConhecidos ? portaisConhecidos.concursos : 'https://www.vunesp.com.br'}",
+    "resumo_ia": "Resumo objetivo explicando a situação atual do certame e banca examinadora."
   }
-]`;
+]
+\`\`\`
+Caso a pesquisa na web não encontre nenhum concurso ou processo seletivo (aberto ou em andamento) para o município, retorne:
+\`\`\`json
+[]
+\`\`\``;
 
   const timer1 = setTimeout(() => {
     const title = document.getElementById('consultaLoadingTitle');
     const sub = document.getElementById('consultaLoadingSub');
     if (title) title.textContent = 'Varrendo Diários Oficiais & Bancas...';
     if (sub) sub.textContent = 'Buscando publicações na Vunesp, IBAM, Consulplan e portais municipais...';
-  }, 2500);
+  }, 2000);
 
   const timer2 = setTimeout(() => {
     const title = document.getElementById('consultaLoadingTitle');
     const sub = document.getElementById('consultaLoadingSub');
     if (title) title.textContent = 'Auditando Vigência e Prazos...';
-    if (sub) sub.textContent = 'Verificando se as inscrições estão abertas ou em andamento e eliminando rotas 404...';
-  }, 5200);
+    if (sub) sub.textContent = 'Verificando inscrições, convocações de aprovados e links oficiais...';
+  }, 4500);
 
   try {
     const candidateText = await chamarGeminiGrounding(apiKey, prompt);
@@ -174,11 +170,13 @@ Se não houver certames recentes, retorne exatamente:
         mostrarToast(`🔍 ${parsedItems.length} certame(s) localizado(s) para ${cidade}!`, 'success');
         return;
       } else {
-        // A IA respondeu confirmando que não há certames ativos
+        // A IA respondeu confirmando que não há certames ativos no critério
         mostrarFeedbackConsulta(
-          'Nenhum certame localizado',
-          `Não foram encontradas publicações recentes de concursos ou processos seletivos para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.`,
-          'info'
+          'Nenhum certame localizado pela IA',
+          `A busca online no Google Search apurou os portais e não localizou editais com inscrições abertas ou convocações recentes para <strong>${escapeHtml(cidade)}</strong> com o filtro informado.<br><br>Você pode conferir diretamente no portal de concursos oficial do município:`,
+          'info',
+          portaisConhecidos?.concursos,
+          `Abrir Portal de Concursos de ${cidade}`
         );
         return;
       }
@@ -188,7 +186,9 @@ Se não houver certames recentes, retorne exatamente:
     mostrarFeedbackConsulta(
       'Nenhum certame localizado',
       `Não foram encontradas publicações recentes de concursos ou processos seletivos para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.`,
-      'info'
+      'info',
+      portaisConhecidos?.concursos,
+      `Abrir Portal de Concursos de ${cidade}`
     );
   } catch (err) {
     clearTimeout(timer1);
@@ -307,13 +307,17 @@ async function chamarGeminiGrounding(apiKey, prompt) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
       
-      // Tenta inicialmente com Google Search Grounding
+      // Tenta inicialmente com Google Search Grounding e baixa temperatura para resposta mais rápida
       let response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }]
+          tools: [{ google_search: {} }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2048
+          }
         })
       });
 
@@ -323,7 +327,11 @@ async function chamarGeminiGrounding(apiKey, prompt) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 2048
+            }
           })
         });
       }
@@ -355,7 +363,7 @@ async function chamarGeminiGrounding(apiKey, prompt) {
   throw ultimoErro || new Error('Não foi possível obter resposta dos servidores da IA.');
 }
 
-function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info') {
+function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info', linkPortal = null, textoPortal = null) {
   const loading = document.getElementById('consultaLoading');
   const statusBox = document.getElementById('consultaStatusFeedback');
   if (loading) loading.style.display = 'none';
@@ -369,7 +377,13 @@ function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info') {
         <p style="color: var(--text-muted); font-size: 12.5px; line-height: 1.45; margin: 0; max-width: 320px;">
           ${mensagem}
         </p>
-        <button type="button" class="btn-card-action" onclick="window.radarActions.resetarFormularioConsulta()" style="margin-top: 8px;">
+        ${linkPortal ? `
+          <a href="${escapeHtml(linkPortal)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary" style="text-decoration: none; margin-top: 4px; padding: 8px 14px; gap: 6px;">
+            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+            <span>${escapeHtml(textoPortal || 'Acessar Portal de Concursos')}</span>
+          </a>
+        ` : ''}
+        <button type="button" class="btn-card-action" onclick="window.radarActions.resetarFormularioConsulta()" style="margin-top: 6px;">
           <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
           <span>Voltar ao Formulário</span>
         </button>
