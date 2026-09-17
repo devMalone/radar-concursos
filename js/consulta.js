@@ -173,20 +173,64 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
   }
 }
 
+// Descobre dinamicamente os modelos disponíveis na conta do usuário ou usa fallback moderno (Gemini 3.5)
+async function obterModelosGemini(apiKey) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.models)) {
+        const candidatos = data.models
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace(/^models\//, ''));
+
+        // Priorização inteligente:
+        // 1º: gemini-3.5-flash-lite (recomendado pelo Google para alta velocidade)
+        // 2º: gemini-3.5-flash (alta capacidade)
+        // 3º: gemini-2.5-flash / outros flash
+        // 4º: demais modelos (pro, etc)
+        candidatos.sort((a, b) => {
+          const score = (m) => {
+            if (m === 'gemini-3.5-flash-lite') return 100;
+            if (m === 'gemini-3.5-flash') return 95;
+            if (m.includes('3.5') && m.includes('flash')) return 90;
+            if (m === 'gemini-2.5-flash') return 80;
+            if (m.includes('flash')) return 70;
+            return 10;
+          };
+          return score(b) - score(a);
+        });
+
+        if (candidatos.length > 0) {
+          return candidatos;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Gemini Discovery] Falha ao consultar lista de modelos:', e);
+  }
+
+  // Fallback moderno e resiliente
+  return [
+    'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+  ];
+}
+
 // Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
 async function chamarGeminiGrounding(apiKey, prompt) {
-  const modelos = [
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-2.0-flash-lite'
-  ];
+  const modelos = await obterModelosGemini(apiKey);
   let ultimoErro = null;
 
   for (const modelo of modelos) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
+      
+      // Tenta inicialmente com Google Search Grounding
+      let response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,6 +238,17 @@ async function chamarGeminiGrounding(apiKey, prompt) {
           tools: [{ google_search: {} }]
         })
       });
+
+      // Se retornar 400 (banco de ferramentas não suportado pelo modelo específico), tenta sem tools
+      if (!response.ok && response.status === 400) {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+      }
 
       if (response.ok) {
         const data = await response.json();
