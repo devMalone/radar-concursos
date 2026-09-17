@@ -280,59 +280,111 @@ export function extrairJsonConcursos(text) {
   return null;
 }
 
-const MODELOS_PADRAO = [
-  'gemini-3.5-flash-lite',
-  'gemini-3.5-flash',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
-];
+let cacheModelosValidos = null;
 
-let cacheModelos = null;
+export function resetarCacheModelos() {
+  cacheModelosValidos = null;
+}
 
-// Descobre dinamicamente os modelos disponíveis na conta ou usa padrão moderno direto
-async function obterModelosGemini(apiKey) {
-  if (cacheModelos && cacheModelos.length > 0) {
-    return cacheModelos;
+// Consulta o ListModels oficial do Google em v1beta e v1 para descobrir os modelos reais da chave
+async function obterModelosValidos(apiKey) {
+  if (cacheModelosValidos && cacheModelosValidos.length > 0) {
+    return cacheModelosValidos;
   }
-  return MODELOS_PADRAO;
+
+  for (const apiVer of ['v1beta', 'v1']) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/${apiVer}/models?key=${apiKey}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.models) && data.models.length > 0) {
+          const modelos = data.models
+            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => ({
+              apiVer,
+              name: m.name.replace(/^models\//, '')
+            }));
+
+          if (modelos.length > 0) {
+            // Prioriza modelos flash rápidos e modernos
+            modelos.sort((a, b) => {
+              const score = (m) => {
+                const n = m.name.toLowerCase();
+                if (n.includes('flash') && (n.includes('3.5') || n.includes('2.5') || n.includes('2.0'))) return 100;
+                if (n.includes('flash')) return 90;
+                if (n.includes('pro')) return 50;
+                return 10;
+              };
+              return score(b) - score(a);
+            });
+
+            cacheModelosValidos = modelos;
+            return modelos;
+          }
+        }
+      } else {
+        const errText = await res.text();
+        console.warn(`[ListModels ${apiVer}] HTTP ${res.status}:`, errText);
+        if (res.status === 400 || res.status === 403) {
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson?.error?.message) {
+              throw new Error(`Google API (${res.status}): ${errJson.error.message}`);
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.warn(`[ListModels ${apiVer}] Exceção:`, e);
+      if (e.message && e.message.includes('Google API')) throw e;
+    }
+  }
+
+  // Fallback de contingência caso a listagem não responda
+  return [
+    { apiVer: 'v1beta', name: 'gemini-2.0-flash' },
+    { apiVer: 'v1beta', name: 'gemini-1.5-flash-latest' },
+    { apiVer: 'v1', name: 'gemini-1.5-flash' },
+    { apiVer: 'v1', name: 'gemini-1.5-pro' }
+  ];
 }
 
 // Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
 async function chamarGeminiGrounding(apiKey, prompt) {
-  const modelos = await obterModelosGemini(apiKey);
+  const modelos = await obterModelosValidos(apiKey);
   let ultimoErro = null;
 
-  for (const modelo of modelos) {
+  for (const item of modelos) {
+    const { apiVer, name } = item;
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/${apiVer}/models/${name}:generateContent?key=${apiKey}`;
       
-      // Tenta inicialmente com Google Search Grounding e baixa temperatura para resposta mais rápida
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048
+        }
+      };
+
+      // Tenta Google Search Grounding se for v1beta
+      if (apiVer === 'v1beta') {
+        payload.tools = [{ google_search: {} }];
+      }
+
       let response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 2048
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
-      // Se retornar 400 (banco de ferramentas não suportado pelo modelo específico), tenta sem tools
-      if (!response.ok && response.status === 400) {
+      // Se retornar 400 com tools no v1beta, tenta sem tools
+      if (!response.ok && response.status === 400 && payload.tools) {
+        delete payload.tools;
         response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 2048
-            }
-          })
+          body: JSON.stringify(payload)
         });
       }
 
@@ -344,18 +396,18 @@ async function chamarGeminiGrounding(apiKey, prompt) {
         }
       } else {
         const errBody = await response.text();
-        console.warn(`[Gemini ${modelo}] HTTP ${response.status}:`, errBody);
-        let msg = `HTTP ${response.status} (${modelo})`;
+        console.warn(`[Gemini ${name} (${apiVer})] HTTP ${response.status}:`, errBody);
+        let msg = `HTTP ${response.status} (${name})`;
         try {
           const jsonErr = JSON.parse(errBody);
           if (jsonErr?.error?.message) {
-            msg = `${jsonErr.error.message} (${modelo})`;
+            msg = `${jsonErr.error.message} (${name})`;
           }
         } catch (_) {}
         ultimoErro = new Error(msg);
       }
     } catch (e) {
-      console.warn(`[Gemini ${modelo}] Exceção:`, e);
+      console.warn(`[Gemini ${name}] Exceção:`, e);
       ultimoErro = e;
     }
   }

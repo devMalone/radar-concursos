@@ -31,7 +31,8 @@ import {
 import { 
   abrirModalConsultaAvulsa, 
   executarConsultaAvulsaLive,
-  resetarFormularioConsulta
+  resetarFormularioConsulta,
+  resetarCacheModelos
 } from './consulta.js';
 import { 
   iniciarSupabase, 
@@ -245,6 +246,7 @@ function salvarConfiguracoesApp() {
   const url = document.getElementById('cfgSupabaseUrl').value.trim();
   const key = document.getElementById('cfgSupabaseKey').value.trim();
   const gemini = document.getElementById('cfgGeminiKey').value.trim().replace(/^["']|["']$/g, '');
+  resetarCacheModelos();
   salvarConfiguracoes(url, key, gemini, state.config.interesses);
 }
 
