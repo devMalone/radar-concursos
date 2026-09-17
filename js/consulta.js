@@ -286,6 +286,28 @@ export function resetarCacheModelos() {
   cacheModelosValidos = null;
 }
 
+// Avalia a prioridade do modelo priorizando versões mais recentes (3.6, 3.5, 2.0)
+// e despriorizando modelos que o Google descontinuou para novos usuários
+export function calcularScoreModelo(name) {
+  const n = (name || '').toLowerCase();
+  let score = 0;
+  
+  if (n.includes('flash')) score += 1000;
+  else if (n.includes('pro')) score += 500;
+  
+  const vMatch = n.match(/(\d+(?:\.\d+)?)/);
+  if (vMatch) {
+    score += parseFloat(vMatch[1]) * 100;
+  }
+
+  // Modelos descontinuados pelo Google para novos usuários
+  if (n.includes('2.5-flash') || n.includes('2.0-flash-lite')) {
+    score -= 600;
+  }
+
+  return score;
+}
+
 // Testa a chave Gemini do usuário diretamente na interface com feedback detalhado
 export async function testarChaveGemini(apiKeyManual = null) {
   const statusEl = document.getElementById('geminiTestStatus');
@@ -381,53 +403,64 @@ export async function testarChaveGemini(apiKeyManual = null) {
       throw new Error(ultimoErro ? `Google API: ${ultimoErro}` : 'Nenhum modelo compatível com geração de conteúdo foi encontrado para esta chave.');
     }
 
-    // Prioriza modelos flash rápidos e modernos
-    modelosUnicos.sort((a, b) => {
-      const score = (m) => {
-        const n = m.name.toLowerCase();
-        if (n.includes('flash') && (n.includes('2.0') || n.includes('2.5') || n.includes('3.5'))) return 100;
-        if (n.includes('flash')) return 90;
-        if (n.includes('pro')) return 50;
-        return 10;
-      };
-      return score(b) - score(a);
-    });
+    // Prioriza modelos flash modernos (ex: 3.6, 3.5, 2.0)
+    modelosUnicos.sort((a, b) => calcularScoreModelo(b.name) - calcularScoreModelo(a.name));
 
-    // 5. Teste rápido de geração com o primeiro modelo
-    const modeloTeste = modelosUnicos[0];
-    if (statusEl) {
-      statusEl.innerHTML = `
-        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 10px 12px; color: #93c5fd; font-size: 12px; display: flex; gap: 8px; align-items: center;">
-          <i data-lucide="loader-2" class="spin" style="width: 16px; height: 16px; flex-shrink: 0; color: #60a5fa;"></i>
-          <span>Modelos encontrados! Testando geração com <strong>${escapeHtml(modeloTeste.name)}</strong>...</span>
-        </div>
-      `;
-      if (window.lucide) window.lucide.createIcons();
-    }
+    // 5. Teste dinâmico de geração: percorre os modelos até encontrar o melhor que responda com sucesso
+    let modeloAtivo = null;
+    const errosTestes = [];
 
-    const testRes = await fetch(`https://generativelanguage.googleapis.com/${modeloTeste.apiVer}/models/${modeloTeste.name}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'OK' }] }],
-        generationConfig: { maxOutputTokens: 5 }
-      })
-    });
+    for (const mod of modelosUnicos) {
+      if (statusEl) {
+        statusEl.innerHTML = `
+          <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 10px 12px; color: #93c5fd; font-size: 12px; display: flex; gap: 8px; align-items: center;">
+            <i data-lucide="loader-2" class="spin" style="width: 16px; height: 16px; flex-shrink: 0; color: #60a5fa;"></i>
+            <span>Testando compatibilidade com <strong>${escapeHtml(mod.name)}</strong>...</span>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+      }
 
-    if (!testRes.ok) {
-      const errBody = await testRes.text();
-      let msg = `HTTP ${testRes.status}`;
       try {
-        const j = JSON.parse(errBody);
-        if (j?.error?.message) msg = j.error.message;
-      } catch (_) {}
-      throw new Error(`Falha no teste com ${modeloTeste.name}: ${msg}`);
+        const testRes = await fetch(`https://generativelanguage.googleapis.com/${mod.apiVer}/models/${mod.name}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'OK' }] }],
+            generationConfig: { maxOutputTokens: 5 }
+          })
+        });
+
+        if (testRes.ok) {
+          modeloAtivo = mod;
+          break; // Encontrou o modelo funcional!
+        } else {
+          const errBody = await testRes.text();
+          let msg = `HTTP ${testRes.status}`;
+          try {
+            const j = JSON.parse(errBody);
+            if (j?.error?.message) msg = j.error.message;
+          } catch (_) {}
+          console.warn(`[Teste Modelo ${mod.name}] Falha:`, msg);
+          errosTestes.push(`${mod.name}: ${msg}`);
+        }
+      } catch (err) {
+        errosTestes.push(`${mod.name}: ${err.message}`);
+      }
     }
 
-    // Armazena no cache de modelos validados para buscas instantâneas
-    cacheModelosValidos = modelosUnicos;
+    if (!modeloAtivo) {
+      throw new Error(errosTestes[0] || 'Nenhum dos modelos disponíveis aceitou a geração de conteúdo.');
+    }
 
-    const listaExibicao = modelosUnicos.slice(0, 4).map(m => m.name).join(', ');
+    // Coloca o modelo ativo testado no topo do cache para buscas subsequentes
+    const modelosOrdenados = [
+      modeloAtivo,
+      ...modelosUnicos.filter(m => m.name !== modeloAtivo.name)
+    ];
+    cacheModelosValidos = modelosOrdenados;
+
+    const listaExibicao = modelosOrdenados.slice(0, 4).map(m => m.name).join(', ');
     if (statusEl) {
       statusEl.innerHTML = `
         <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 10px 12px; color: #86efac; font-size: 12px; display: flex; flex-direction: column; gap: 5px;">
@@ -436,14 +469,14 @@ export async function testarChaveGemini(apiKeyManual = null) {
             <span>Chave Gemini validada e ativa com sucesso!</span>
           </div>
           <div style="color: #cbd5e1; font-size: 11px; line-height: 1.4;">
-            <strong>Modelo Selecionado:</strong> ${escapeHtml(modeloTeste.name)} (${modeloTeste.apiVer})<br>
-            <strong>Modelos Autorizados:</strong> ${escapeHtml(listaExibicao)}${modelosUnicos.length > 4 ? '...' : ''}
+            <strong>Modelo Selecionado:</strong> ${escapeHtml(modeloAtivo.name)} (${modeloAtivo.apiVer})<br>
+            <strong>Modelos Autorizados:</strong> ${escapeHtml(listaExibicao)}${modelosOrdenados.length > 4 ? '...' : ''}
           </div>
         </div>
       `;
       if (window.lucide) window.lucide.createIcons();
     }
-    mostrarToast(`Chave Gemini OK! Modelo ativo: ${modeloTeste.name}`, 'success');
+    mostrarToast(`Chave Gemini OK! Modelo ativo: ${modeloAtivo.name}`, 'success');
     return true;
 
   } catch (err) {
@@ -524,29 +557,20 @@ async function obterModelosValidos(apiKey) {
   }
 
   if (modelos.length > 0) {
-    // Prioriza modelos rápidos e inteligentes
-    modelos.sort((a, b) => {
-      const score = (m) => {
-        const n = m.name.toLowerCase();
-        if (n.includes('flash') && (n.includes('2.0') || n.includes('2.5') || n.includes('3.5'))) return 100;
-        if (n.includes('flash')) return 90;
-        if (n.includes('pro')) return 50;
-        return 10;
-      };
-      return score(b) - score(a);
-    });
+    // Prioriza modelos rápidos e inteligentes usando a pontuação ponderada
+    modelos.sort((a, b) => calcularScoreModelo(b.name) - calcularScoreModelo(a.name));
 
     cacheModelosValidos = modelos;
     return modelos;
   }
 
-  // Fallback seguro caso a listagem não responda (sem modelos com 404 em v1beta)
+  // Fallback seguro caso a listagem não responda (sem modelos descontinuados)
   return [
+    { apiVer: 'v1beta', name: 'gemini-3.6-flash' },
+    { apiVer: 'v1beta', name: 'gemini-3.5-flash' },
     { apiVer: 'v1beta', name: 'gemini-2.0-flash' },
-    { apiVer: 'v1beta', name: 'gemini-2.0-flash-exp' },
     { apiVer: 'v1', name: 'gemini-1.5-flash' },
-    { apiVer: 'v1', name: 'gemini-1.5-pro' },
-    { apiVer: 'v1beta', name: 'gemini-1.5-flash-latest' }
+    { apiVer: 'v1', name: 'gemini-1.5-pro' }
   ];
 }
 
