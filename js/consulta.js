@@ -82,21 +82,24 @@ export async function executarConsultaAvulsaLive() {
     : `Foco de interesse: Geral (Prefeitura, Educação, Saúde, Administração, Guarda Civil e Autarquias).`;
 
   const prompt = `Você é um especialista em concursos públicos do estado de São Paulo.
-Pesquise na web com o Google Search sobre concursos públicos, processos seletivos e convocações da Prefeitura Municipal de ${cidade} - SP e órgãos públicos locais.
+Pesquise na web em tempo real com o Google Search sobre concursos públicos, processos seletivos, convocações, gabaritos e recursos da Prefeitura Municipal de ${cidade} - SP e órgãos públicos municipais.
 ${focoTexto}
 
 ${contextoPortal}
-Principais bancas examinadoras de SP: ${bancasTexto}.
+Principais bancas examinadoras atuantes no estado: ${bancasTexto}, Instituto Consulplan, Publiconsult, Avança SP, Consesp, Indepac.
 
-DIRETRIZES DE PESQUISA:
-1. Busque editais da Prefeitura Municipal de ${cidade}, Câmara Municipal, autarquias municipais (como DAE, SEMAE, SAAE, EMURB) e na banca Fundação Vunesp ou IBAM.
-2. Identifique e traga certames com:
-   - Inscrições Abertas ou com edital publicado
-   - Em Andamento (provas aplicadas, gabaritos, fase de recursos, homologação ou convocações de aprovados do cadastro de reserva)
-   - Processos Seletivos Simplificados
-   - Licitações abertas para contratação de banca organizadora
-3. Se houver concurso vigente com convocações ou recursos em andamento, inclua-o com status "Em Andamento (Recursos / Gabarito)".
-4. Forneça links oficiais funcionais (página da banca organizadora ou portal oficial de concursos da prefeitura: ${portaisConhecidos ? portaisConhecidos.concursos : 'site do município'}).
+DIRETRIZES DE PESQUISA (ACOMPANHAMENTO COMPLETO DO CICLO DE VIDA):
+1. O Radar de Concursos NÃO rastreia apenas inscrições abertas. Ele monitora o ciclo COMPLETO dos certames vigentes do município.
+2. É OBRIGATÓRIO INCLUIR concursos e processos seletivos que estejam em QUALQUER UMA das seguintes etapas:
+   a) EM ANDAMENTO (mesmo com inscrições encerradas): provas recém-realizadas em 2025/2026, gabaritos preliminares ou definitivos publicados, FASE DE INTERPOSIÇÃO DE RECURSOS aberta ou em julgamento, resultados preliminares, homologação ou convocações de aprovados.
+      -> Status obrigatório: "Em Andamento (Recursos / Gabarito)"
+      -> fase_detalhada: descreva com clareza a etapa atual (ex: "Gabaritos publicados em DD/MM - Fase de Recursos Aberta").
+   b) EDITAL PUBLICADO / INSCRIÇÕES ABERTAS: certames com edital aberto ou período de inscrições ativo.
+      -> Status: "Edital Aberto"
+   c) LICITAÇÃO / PREVISTO: certames em fase de escolha/contratação de banca ou autorização oficial.
+      -> Status: "Licitação" ou "Previsto"
+3. Busque tanto na Prefeitura Municipal de ${cidade}, Câmara Municipal, autarquias municipais quanto nos sites das bancas organizadoras (ex: Instituto Consulplan, Vunesp, IBAM, Consesp, Publiconsult, etc.).
+4. Forneça o link oficial funcional da página do certame na banca organizadora ou no portal oficial da prefeitura (${portaisConhecidos ? portaisConhecidos.concursos : 'portal do município'}).
 
 FORMATO DE RESPOSTA:
 Retorne EXCLUSIVAMENTE um bloco markdown com array JSON com todos os certames localizados:
@@ -105,20 +108,20 @@ Retorne EXCLUSIVAMENTE um bloco markdown com array JSON com todos os certames lo
   {
     "cidade": "${cidade}",
     "orgao": "Prefeitura Municipal de ${cidade}",
-    "banca": "Fundação Vunesp (ou banca organizadora)",
+    "banca": "Nome da banca organizadora (ex: Instituto Consulplan, Fundação Vunesp, etc.)",
     "titulo": "Nome oficial do concurso ou processo seletivo",
     "status": "Edital Aberto" OU "Em Andamento (Recursos / Gabarito)" OU "Licitação" OU "Previsto",
-    "fase_detalhada": "Fase detalhada (ex: Inscrições Abertas até DD/MM OU Convocações de Aprovados OU Fase de Recursos)",
+    "fase_detalhada": "Fase detalhada atual (ex: Gabaritos publicados - Interposição de Recursos até DD/MM OU Inscrições Abertas)",
     "cargos": ["Lista dos principais cargos"],
-    "areas": ["Administrativo", "Educação", "Geral"],
+    "areas": ["Administrativo", "Educação", "Saúde", "Geral"],
     "salario_resumo": "Ex: R$ 3.000 a R$ 7.000 ou A consultar",
-    "prazo_inscricao": "Informação sobre datas e inscrições",
-    "link_oficial": "${portaisConhecidos ? portaisConhecidos.concursos : 'https://www.vunesp.com.br'}",
-    "resumo_ia": "Resumo objetivo explicando a situação atual do certame e banca examinadora."
+    "prazo_inscricao": "Informação sobre datas de provas, recursos ou inscrições",
+    "link_oficial": "${portaisConhecidos ? portaisConhecidos.concursos : 'https://www.institutoconsulplan.org.br'}",
+    "resumo_ia": "Resumo objetivo explicando a situação atual do certame, fase de recursos/gabarito e banca examinadora."
   }
 ]
 \`\`\`
-Caso a pesquisa na web não encontre nenhum concurso ou processo seletivo (aberto ou em andamento) para o município, retorne:
+Caso a pesquisa na web não encontre nenhum concurso ou processo seletivo (seja aberto, em andamento, em recursos ou com convocações) para o município, retorne:
 \`\`\`json
 []
 \`\`\``;
@@ -173,7 +176,7 @@ Caso a pesquisa na web não encontre nenhum concurso ou processo seletivo (abert
         // A IA respondeu confirmando que não há certames ativos no critério
         mostrarFeedbackConsulta(
           'Nenhum certame localizado pela IA',
-          `A busca online no Google Search apurou os portais e não localizou editais com inscrições abertas ou convocações recentes para <strong>${escapeHtml(cidade)}</strong> com o filtro informado.<br><br>Você pode conferir diretamente no portal de concursos oficial do município:`,
+          `A busca online no Google Search apurou os portais oficiais e não localizou editais abertos, certames em andamento (fases de recursos/gabarito) ou convocações recentes para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.<br><br>Você pode conferir diretamente no portal oficial do município:`,
           'info',
           portaisConhecidos?.concursos,
           `Abrir Portal de Concursos de ${cidade}`
