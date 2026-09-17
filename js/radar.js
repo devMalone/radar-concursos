@@ -134,7 +134,294 @@ export function renderTimelineStepper(c) {
         <span class="step-label">Convocações</span>
       </div>
     </div>
-  `;
+/* ==========================================================================
+   MOTOR DE PRAZOS INTELIGENTES & CONTAGEM REGRESSIVA
+   ========================================================================== */
+export function extrairDatasConcurso(c) {
+  const textoCompleto = `${c.prazo_inscricao || ''} ${c.fase_detalhada || ''} ${c.titulo || ''} ${c.resumo_ia || ''}`;
+  
+  let dataInscricaoFim = null;
+  let dataProva = null;
+
+  const matchProva = textoCompleto.match(/prova[s]?\s+(?:em\s+|prevista[s]?\s+para\s+|no\s+dia\s+|de\s+)?(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (matchProva) {
+    dataProva = parseDataBrasileira(matchProva[1]);
+  }
+
+  const matchInscricao = textoCompleto.match(/(?:at[eé]|a|encerra[m]?\s+em)\s+(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (matchInscricao) {
+    dataInscricaoFim = parseDataBrasileira(matchInscricao[1]);
+  } else {
+    const todasDatas = [...textoCompleto.matchAll(/\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g)].map(m => m[1]);
+    if (todasDatas.length >= 2 && !dataProva) {
+      dataInscricaoFim = parseDataBrasileira(todasDatas[1]);
+    } else if (todasDatas.length === 1 && !dataProva) {
+      dataInscricaoFim = parseDataBrasileira(todasDatas[0]);
+    }
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  let diasParaInscricao = null;
+  if (dataInscricaoFim) {
+    const diff = dataInscricaoFim.getTime() - hoje.getTime();
+    diasParaInscricao = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  let diasParaProva = null;
+  if (dataProva) {
+    const diff = dataProva.getTime() - hoje.getTime();
+    diasParaProva = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  return {
+    dataInscricaoFim,
+    dataProva,
+    diasParaInscricao,
+    diasParaProva
+  };
+}
+
+function parseDataBrasileira(dataStr) {
+  if (!dataStr) return null;
+  const parts = dataStr.split('/');
+  if (parts.length !== 3) return null;
+  const dia = parseInt(parts[0], 10);
+  const mes = parseInt(parts[1], 10) - 1;
+  const ano = parseInt(parts[2], 10);
+  return new Date(ano, mes, dia, 23, 59, 59);
+}
+
+export function renderCountdownBadges(c) {
+  const { dataInscricaoFim, dataProva, diasParaInscricao, diasParaProva } = extrairDatasConcurso(c);
+  const badges = [];
+
+  // Inscrição
+  if (diasParaInscricao !== null) {
+    if (diasParaInscricao < 0) {
+      badges.push(`
+        <span class="countdown-chip closed" title="Prazo de inscrição encerrado">
+          <i data-lucide="calendar-x" style="width: 11px; height: 11px;"></i>
+          <span>Inscrições Encerradas</span>
+        </span>
+      `);
+    } else if (diasParaInscricao === 0) {
+      badges.push(`
+        <span class="countdown-chip urgent" title="Último dia de inscrição hoje!">
+          <span class="pulse-urgent"></span>
+          <i data-lucide="clock" style="width: 11px; height: 11px;"></i>
+          <span>Último dia de inscrição!</span>
+        </span>
+      `);
+    } else if (diasParaInscricao <= 5) {
+      badges.push(`
+        <span class="countdown-chip urgent" title="Inscrições encerram em breve">
+          <span class="pulse-urgent"></span>
+          <i data-lucide="flame" style="width: 11px; height: 11px;"></i>
+          <span>Inscrições: Faltam ${diasParaInscricao} ${diasParaInscricao === 1 ? 'dia' : 'dias'}</span>
+        </span>
+      `);
+    } else {
+      badges.push(`
+        <span class="countdown-chip active" title="Inscrições abertas">
+          <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
+          <span>Inscrições até ${dataInscricaoFim.toLocaleDateString('pt-BR')} (${diasParaInscricao} dias)</span>
+        </span>
+      `);
+    }
+  }
+
+  // Prova
+  if (diasParaProva !== null) {
+    if (diasParaProva < 0) {
+      badges.push(`
+        <span class="countdown-chip done" title="Provas já foram aplicadas">
+          <i data-lucide="check-circle" style="width: 11px; height: 11px;"></i>
+          <span>Provas Aplicadas</span>
+        </span>
+      `);
+    } else if (diasParaProva === 0) {
+      badges.push(`
+        <span class="countdown-chip exam-today" title="Dia da realização da prova!">
+          <i data-lucide="alert-circle" style="width: 11px; height: 11px;"></i>
+          <span>Dia da Prova Hoje</span>
+        </span>
+      `);
+    } else {
+      badges.push(`
+        <span class="countdown-chip exam" title="Foco total na preparação e revisão">
+          <i data-lucide="target" style="width: 11px; height: 11px;"></i>
+          <span>Prova em ${diasParaProva} ${diasParaProva === 1 ? 'dia' : 'dias'} (${dataProva.toLocaleDateString('pt-BR')})</span>
+        </span>
+      `);
+    }
+  }
+
+  if (badges.length === 0) return '';
+  return `<div class="countdown-row">${badges.join('')}</div>`;
+}
+
+function formatToICSDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}${m}${d}`;
+}
+
+export function gerarConteudoICS(c) {
+  const { dataInscricaoFim, dataProva } = extrairDatasConcurso(c);
+  const events = [];
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+  if (dataProva) {
+    const nextDay = new Date(dataProva.getTime() + 86400000);
+    events.push(`BEGIN:VEVENT
+UID:prova-${c.id}-${Date.now()}@radarconcursos.sp
+DTSTAMP:${now}
+DTSTART;VALUE=DATE:${formatToICSDate(dataProva)}
+DTEND;VALUE=DATE:${formatToICSDate(nextDay)}
+SUMMARY:[PROVA] ${c.orgao} — ${c.cidade}
+DESCRIPTION:Dia da Prova do Concurso ${c.titulo}. Banca: ${c.banca || 'Oficial'}. Link Oficial: ${c.link_oficial || ''}
+LOCATION:${c.cidade} - SP, Brasil
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT`);
+  }
+
+  if (dataInscricaoFim) {
+    const nextDay = new Date(dataInscricaoFim.getTime() + 86400000);
+    events.push(`BEGIN:VEVENT
+UID:inscricao-${c.id}-${Date.now()}@radarconcursos.sp
+DTSTAMP:${now}
+DTSTART;VALUE=DATE:${formatToICSDate(dataInscricaoFim)}
+DTEND;VALUE=DATE:${formatToICSDate(nextDay)}
+SUMMARY:[ÚLTIMO DIA INSCRIÇÃO] ${c.orgao} — ${c.cidade}
+DESCRIPTION:Término do prazo de inscrição para ${c.titulo}. Link Oficial: ${c.link_oficial || ''}
+LOCATION:${c.cidade} - SP, Brasil
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT`);
+  }
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Antigravity//Radar de Concursos SP//PT-BR
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+${events.join('\n')}
+END:VCALENDAR`;
+}
+
+export function baixarArquivoICS(concursoId) {
+  const c = state.concursos.find(item => item.id === concursoId);
+  if (!c) return;
+
+  const conteudo = gerarConteudoICS(c);
+  const blob = new Blob([conteudo], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `concurso_${c.cidade.toLowerCase().replace(/\s+/g, '_')}_agenda.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  mostrarToast('Arquivo .ics gerado com sucesso para seu calendário!');
+}
+
+export function abrirGoogleCalendar(concursoId, tipo = 'prova') {
+  const c = state.concursos.find(item => item.id === concursoId);
+  if (!c) return;
+
+  const { dataInscricaoFim, dataProva } = extrairDatasConcurso(c);
+  const targetDate = tipo === 'prova' ? dataProva : dataInscricaoFim;
+  if (!targetDate) {
+    mostrarToast('Data não identificada para este certame.');
+    return;
+  }
+
+  const nextDay = new Date(targetDate.getTime() + 86400000);
+  const startStr = formatToICSDate(targetDate);
+  const endStr = formatToICSDate(nextDay);
+
+  const titulo = tipo === 'prova' 
+    ? `[PROVA] Concurso ${c.orgao} (${c.cidade})`
+    : `[ÚLTIMO DIA] Inscrição Concurso ${c.orgao} (${c.cidade})`;
+
+  const detalhes = `Concurso: ${c.titulo}\nBanca Oficial: ${c.banca || 'Própria'}\nCargos: ${(c.cargos || []).join(', ')}\nLink Oficial: ${c.link_oficial || ''}`;
+  const local = `${c.cidade} - SP, Brasil`;
+
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(detalhes)}&location=${encodeURIComponent(local)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export function abrirOpcoesAgenda(concursoId) {
+  const c = state.concursos.find(item => item.id === concursoId);
+  if (!c) return;
+
+  const { dataInscricaoFim, dataProva, diasParaInscricao, diasParaProva } = extrairDatasConcurso(c);
+
+  const tituloEl = document.getElementById('modalAgendaTitulo');
+  if (tituloEl) {
+    tituloEl.textContent = `${c.cidade} — Adicionar à Agenda`;
+  }
+
+  const bodyEl = document.getElementById('modalAgendaBody');
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+        <strong style="color: var(--primary); display: flex; align-items: center; gap: 6px; font-size: 13px;">
+          <i data-lucide="calendar" style="width: 15px; height: 15px;"></i> ${escapeHtml(c.orgao)}
+        </strong>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          ${escapeHtml(c.titulo)}
+        </p>
+      </div>
+
+      <div class="agenda-options-list">
+        ${dataProva ? `
+          <button type="button" class="agenda-opt-btn" onclick="window.radarActions.abrirGoogleCalendar('${escapeHtml(c.id)}', 'prova')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <i data-lucide="target" style="width: 18px; height: 18px; color: #a78bfa;"></i>
+              <div style="text-align: left;">
+                <div style="font-size: 13px; font-weight: 700;">Google Agenda: Dia da Prova</div>
+                <div style="font-size: 11px; color: var(--text-dim);">${dataProva.toLocaleDateString('pt-BR')} ${diasParaProva !== null ? `(${diasParaProva} dias)` : ''}</div>
+              </div>
+            </div>
+            <i data-lucide="external-link" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
+          </button>
+        ` : ''}
+
+        ${dataInscricaoFim ? `
+          <button type="button" class="agenda-opt-btn" onclick="window.radarActions.abrirGoogleCalendar('${escapeHtml(c.id)}', 'inscricao')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <i data-lucide="clock" style="width: 18px; height: 18px; color: #f59e0b;"></i>
+              <div style="text-align: left;">
+                <div style="font-size: 13px; font-weight: 700;">Google Agenda: Fim das Inscrições</div>
+                <div style="font-size: 11px; color: var(--text-dim);">${dataInscricaoFim.toLocaleDateString('pt-BR')} ${diasParaInscricao !== null ? `(${diasParaInscricao} dias)` : ''}</div>
+              </div>
+            </div>
+            <i data-lucide="external-link" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
+          </button>
+        ` : ''}
+
+        <button type="button" class="agenda-opt-btn" onclick="window.radarActions.baixarArquivoICS('${escapeHtml(c.id)}')">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="download" style="width: 18px; height: 18px; color: #34d399;"></i>
+            <div style="text-align: left;">
+              <div style="font-size: 13px; font-weight: 700;">Baixar Arquivo Universal (.ICS)</div>
+              <div style="font-size: 11px; color: var(--text-dim);">Sincroniza com iPhone, Android, Outlook e Mac</div>
+            </div>
+          </div>
+          <i data-lucide="arrow-down-to-line" style="width: 14px; height: 14px; color: #34d399;"></i>
+        </button>
+      </div>
+    `;
+  }
+
+  abrirModal('modalAgendaConcurso');
+  refreshIcons();
 }
 
 function renderizarListaCards(itens, isAbaAcompanhados = false) {
@@ -245,8 +532,9 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
           </div>
         </div>
 
-        <!-- Linha 3.5: Linha do Tempo das Etapas Oficiais -->
+        <!-- Linha 3.5: Linha do Tempo das Etapas Oficiais & Contagem Regressiva -->
         ${renderTimelineStepper(c)}
+        ${renderCountdownBadges(c)}
 
         ${c.resumo_ia ? `
           <div class="ai-summary-box">
@@ -268,6 +556,10 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
           <button class="btn-card-action study" onclick="window.radarActions.abrirModalPlano('${escapeHtml(c.id)}')">
             <i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i>
             <span>Plano de Estudos</span>
+          </button>
+          <button class="btn-card-action calendar" onclick="window.radarActions.abrirOpcoesAgenda('${escapeHtml(c.id)}')">
+            <i data-lucide="calendar-plus" style="width: 14px; height: 14px;"></i>
+            <span>Agenda</span>
           </button>
           <button class="btn-card-action share" onclick="window.radarActions.compartilharConcurso('${escapeHtml(c.id)}')">
             <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>

@@ -482,6 +482,33 @@
     </div>
   </div>
 
+  <!-- MODAL OPÇÕES DE AGENDAMENTO / CALENDÁRIO -->
+  <div class="modal-overlay center" id="modalAgendaConcurso">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2 class="modal-title" id="modalAgendaTitulo" style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="calendar-plus" style="width: 18px; height: 18px; color: var(--primary);"></i>
+            <span>Sincronizar com Agenda</span>
+          </h2>
+          <span class="modal-subtitle">Salve prazos e datas de prova no seu calendário</span>
+        </div>
+        <button class="modal-close-btn" onclick="window.radarActions.fecharModalAtual()">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalAgendaBody" style="padding: 16px;"></div>
+
+      <div class="modal-footer">
+        <button class="btn-modal-main" style="width: 100%;" onclick="window.radarActions.fecharModalAtual()">
+          <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+          <span>Fechar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DO ECOSSISTEMA ANTIGRAVITY (CROSS-APP SWITCHER) -->
   <div class="modal-overlay center" id="ecosystemModal" onclick="if(event.target === this) window.closeEcosystemModal()">
     <div class="modal-container" style="max-width: 460px;">

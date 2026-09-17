@@ -15,7 +15,10 @@ import {
   abrirModalPlano, 
   copiarPlanoEstudo,
   toggleTopicoEstudo,
-  compartilharConcurso
+  compartilharConcurso,
+  abrirOpcoesAgenda,
+  abrirGoogleCalendar,
+  baixarArquivoICS
 } from './radar.js';
 import { 
   renderizarMunicipios, 
@@ -57,7 +60,10 @@ window.radarActions = {
   toggleMostrarChave,
   openEcosystemModal,
   closeEcosystemModal,
-  navigateToApp
+  navigateToApp,
+  abrirOpcoesAgenda,
+  abrirGoogleCalendar,
+  baixarArquivoICS
 };
 
 // ================= ECOSSISTEMA ANTIGRAVITY (CROSS-APP SWITCHER) =================
