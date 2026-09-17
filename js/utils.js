@@ -2,6 +2,16 @@
 
 import { state } from './state.js';
 
+let isClosingProgrammatically = false;
+
+export function setIsClosingProgrammatically(val) {
+  isClosingProgrammatically = !!val;
+}
+
+export function getIsClosingProgrammatically() {
+  return isClosingProgrammatically;
+}
+
 export function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
@@ -23,6 +33,7 @@ export function fecharModalAtual(fromPopState = false) {
   }
 
   if (!fromPopState) {
+    setIsClosingProgrammatically(true);
     history.back();
   }
 }
@@ -35,6 +46,7 @@ export function fecharModal(modalId) {
   const idx = state.modalStack.indexOf(modalId);
   if (idx !== -1) {
     state.modalStack.splice(idx, 1);
+    setIsClosingProgrammatically(true);
     history.back();
   }
 }

@@ -1,4 +1,4 @@
-// js/app.js — Orquestrador Principal do Radar de Concursos SP (Padrão Casa do Sagrado)
+// js/app.js — Orquestrador Principal do Radar de Concursos SP (v13 PWA)
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { 
@@ -7,7 +7,9 @@ import {
   fecharModalAtual, 
   mostrarToast, 
   refreshIcons,
-  toggleMostrarChave
+  toggleMostrarChave,
+  getIsClosingProgrammatically,
+  setIsClosingProgrammatically
 } from './utils.js';
 import { 
   renderizarRadar, 
@@ -18,7 +20,8 @@ import {
   compartilharConcurso,
   abrirOpcoesAgenda,
   abrirGoogleCalendar,
-  baixarArquivoICS
+  baixarArquivoICS,
+  toggleDetalhesCard
 } from './radar.js';
 import { 
   renderizarMunicipios, 
@@ -28,7 +31,7 @@ import {
 import { 
   abrirModalConsultaAvulsa, 
   executarConsultaAvulsaLive,
-  setModoConsulta
+  resetarFormularioConsulta
 } from './consulta.js';
 import { 
   iniciarSupabase, 
@@ -48,68 +51,24 @@ window.radarActions = {
   abrirModalPortais,
   abrirModalConsultaAvulsa,
   executarConsultaAvulsaLive,
-  setModoConsulta,
+  resetarFormularioConsulta,
+  toggleDetalhesCard,
   fecharModal,
   fecharModalAtual,
   sincronizarSupabase,
   testarConexaoSupabase,
-  salvarConfiguracoes,
+  salvarConfiguracoes: salvarConfiguracoesApp,
   ativarNotificacoes,
   testarNotificacaoNativa,
   toggleCidadeAlerta,
+  adicionarCidadeCustom,
+  adicionarInteresseCustom,
+  removerInteresse,
   toggleMostrarChave,
-  openEcosystemModal,
-  closeEcosystemModal,
-  navigateToApp,
   abrirOpcoesAgenda,
   abrirGoogleCalendar,
   baixarArquivoICS
 };
-
-// ================= ECOSSISTEMA ANTIGRAVITY (CROSS-APP SWITCHER) =================
-function getEcosystemAppUrl(targetApp) {
-  const isGitHubPages = window.location.hostname.includes('github.io');
-  if (isGitHubPages) {
-    const urls = {
-      radar: 'https://devmalone.github.io/radar-concursos/',
-      financeiro: 'https://devmalone.github.io/controle-financeiro/',
-      rotina: 'https://devmalone.github.io/rotina-semanal/'
-    };
-    return urls[targetApp] || '#';
-  }
-  const localUrls = {
-    radar: '../Radar de Concursos/index.html',
-    financeiro: '../Controle Financeiro/index.html',
-    rotina: '../Rotina Semanal/index.html'
-  };
-  return localUrls[targetApp] || '#';
-}
-
-function openEcosystemModal() {
-  const modal = document.getElementById('ecosystemModal');
-  if (modal) {
-    modal.classList.add('active');
-    refreshIcons();
-  }
-}
-
-function closeEcosystemModal() {
-  const modal = document.getElementById('ecosystemModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function navigateToApp(targetApp) {
-  const url = getEcosystemAppUrl(targetApp);
-  if (url && url !== '#') {
-    window.location.href = url;
-  }
-}
-
-window.openEcosystemModal = openEcosystemModal;
-window.closeEcosystemModal = closeEcosystemModal;
-window.navigateToApp = navigateToApp;
 
 // ================= SINCRONIZAÇÃO DE ALTURA (100dvh) =================
 function sincronizarAlturaViewport() {
@@ -162,16 +121,75 @@ function carregarInputsConfiguracoes() {
   const urlEl = document.getElementById('cfgSupabaseUrl');
   const keyEl = document.getElementById('cfgSupabaseKey');
   const geminiEl = document.getElementById('cfgGeminiKey');
-  const braveEl = document.getElementById('cfgBraveKey');
 
   if (urlEl) urlEl.value = state.config.supabaseUrl || '';
   if (keyEl) keyEl.value = state.config.supabaseKey || '';
   if (geminiEl) geminiEl.value = state.config.geminiKey || '';
-  if (braveEl) braveEl.value = state.config.braveKey || '';
 
+  renderizarChipsInteresses();
   renderizarChipsCidadesAlerta();
 }
 
+// ================= MOTOR DE INTERESSES DO USUÁRIO =================
+function renderizarChipsInteresses() {
+  const container = document.getElementById('interessesContainer');
+  if (!container) return;
+
+  const interesses = state.config.interesses || [];
+  if (interesses.length === 0) {
+    container.innerHTML = `
+      <span style="font-size: 11.5px; color: var(--text-dim); font-style: italic;">
+        Nenhuma palavra-chave cadastrada. O app usará visual neutro para todos os cargos.
+      </span>
+    `;
+    return;
+  }
+
+  container.innerHTML = interesses.map((tag, idx) => `
+    <span class="interesse-chip-item">
+      <span>${escapeHtml(tag)}</span>
+      <button type="button" class="btn-remove-chip" onclick="window.radarActions.removerInteresse(${idx})" title="Remover termo">
+        &times;
+      </button>
+    </span>
+  `).join('');
+}
+
+function adicionarInteresseCustom() {
+  const input = document.getElementById('inputNovoInteresse');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+
+  if (!state.config.interesses) state.config.interesses = [];
+  const normalizado = val.toLowerCase();
+  const jaExiste = state.config.interesses.some(i => i.toLowerCase() === normalizado);
+
+  if (jaExiste) {
+    mostrarToast('Este termo de interesse já está cadastrado.', 'info');
+    return;
+  }
+
+  state.config.interesses.push(val);
+  input.value = '';
+  salvarLocal();
+  renderizarChipsInteresses();
+  renderizarRadar();
+  mostrarToast(`Interesse "${val}" adicionado!`, 'success');
+}
+
+function removerInteresse(idx) {
+  if (!state.config.interesses) return;
+  if (idx >= 0 && idx < state.config.interesses.length) {
+    const removido = state.config.interesses.splice(idx, 1);
+    salvarLocal();
+    renderizarChipsInteresses();
+    renderizarRadar();
+    mostrarToast(`Termo "${removido[0]}" removido.`);
+  }
+}
+
+// ================= MUNICÍPIOS MONITORADOS PARA ALERTAS =================
 function renderizarChipsCidadesAlerta() {
   const container = document.getElementById('alertCitiesContainer');
   if (!container) return;
@@ -179,11 +197,14 @@ function renderizarChipsCidadesAlerta() {
   const todasCidades = Object.keys(PORTAIS_CIDADES);
   const selecionadas = state.config.cidadesAlertas || [];
 
-  container.innerHTML = todasCidades.map(cid => {
+  // Combina com cidades custom que o usuário adicionou
+  const listaUnica = Array.from(new Set([...todasCidades, ...selecionadas]));
+
+  container.innerHTML = listaUnica.map(cid => {
     const isAtivo = selecionadas.includes(cid);
     return `
-      <span class="alert-city-chip ${isAtivo ? 'active' : ''}" onclick="window.radarActions.toggleCidadeAlerta('${cid}')">
-        ${isAtivo ? '✓ ' : '+ '}${cid}
+      <span class="alert-city-chip ${isAtivo ? 'active' : ''}" onclick="window.radarActions.toggleCidadeAlerta('${escapeHtml(cid)}')">
+        ${isAtivo ? '✓ ' : '+ '}${escapeHtml(cid)}
       </span>
     `;
   }).join('');
@@ -203,6 +224,29 @@ function toggleCidadeAlerta(cidade) {
   renderizarChipsCidadesAlerta();
 }
 
+function adicionarCidadeCustom() {
+  const input = document.getElementById('inputNovaCidadeAlerta');
+  if (!input) return;
+  const cid = input.value.trim();
+  if (!cid) return;
+
+  if (!state.config.cidadesAlertas) state.config.cidadesAlertas = [];
+  if (!state.config.cidadesAlertas.includes(cid)) {
+    state.config.cidadesAlertas.push(cid);
+    salvarLocal();
+    renderizarChipsCidadesAlerta();
+    mostrarToast(`Cidade ${cid} monitorada com sucesso!`, 'success');
+  }
+  input.value = '';
+}
+
+function salvarConfiguracoesApp() {
+  const url = document.getElementById('cfgSupabaseUrl').value.trim();
+  const key = document.getElementById('cfgSupabaseKey').value.trim();
+  const gemini = document.getElementById('cfgGeminiKey').value.trim();
+  salvarConfiguracoes(url, key, gemini, state.config.interesses);
+}
+
 async function testarNotificacaoNativa() {
   if (!('Notification' in window)) {
     mostrarToast('Este navegador não suporta notificações nativas.', 'error');
@@ -217,7 +261,7 @@ async function testarNotificacaoNativa() {
   try {
     const reg = await navigator.serviceWorker.ready;
     const cidades = state.config.cidadesAlertas || [];
-    const cidadeExemplo = cidades[0] || 'Catanduva';
+    const cidadeExemplo = cidades[0] || 'São José do Rio Preto';
 
     reg.showNotification(`Radar de Concursos: ${cidadeExemplo}`, {
       body: `Novo edital oficial publicado! Inscrições abertas e retificações apuradas.`,
@@ -234,29 +278,41 @@ async function testarNotificacaoNativa() {
   }
 }
 
-// ================= BOTÃO VOLTAR DO ANDROID (POPSTATE) =================
+// ================= BOTÃO VOLTAR DO ANDROID (POPSTATE SEGURO) =================
 let ultimoToqueSair = 0;
 window.addEventListener('popstate', (e) => {
-  if (state.modalStack.length > 0) {
-    fecharModalAtual(true);
-  } else {
-    // Se estiver em outra aba, volta para o Radar
-    const tabRadar = document.getElementById('tab-radar');
-    if (tabRadar && !tabRadar.classList.contains('active')) {
-      mudarAba('tab-radar');
-      history.pushState(null, '');
-      return;
-    }
+  // Se o fechamento foi programático (via botão X ou conclusão), ignora sem disparar saída
+  if (getIsClosingProgrammatically()) {
+    setIsClosingProgrammatically(false);
+    return;
+  }
 
-    // Se já estiver no Radar, dupla confirmação para sair
-    const agora = Date.now();
-    if (agora - ultimoToqueSair < 2200) {
-      // Permite fechar/sair
-    } else {
-      ultimoToqueSair = agora;
-      mostrarToast('Pressione novamente para sair do app', 'info');
-      history.pushState(null, '');
+  // Se havia modal aberto na pilha e o usuário tocou no botão Voltar físico do Android
+  if (state.modalStack.length > 0) {
+    const modalId = state.modalStack.pop();
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove('active');
     }
+    return;
+  }
+
+  // Se estiver em outra aba, retorna para o Radar
+  const tabRadar = document.getElementById('tab-radar');
+  if (tabRadar && !tabRadar.classList.contains('active')) {
+    mudarAba('tab-radar');
+    history.pushState(null, '');
+    return;
+  }
+
+  // Se já estiver no Radar e não houver modais, confirmação de segurança para sair
+  const agora = Date.now();
+  if (agora - ultimoToqueSair < 2200) {
+    // Permite sair
+  } else {
+    ultimoToqueSair = agora;
+    mostrarToast('Pressione novamente para sair do app', 'info');
+    history.pushState(null, '');
   }
 });
 
@@ -379,12 +435,7 @@ function configurarEventosInterface() {
   const btnSalvarCfg = document.getElementById('btnSalvarConfig');
   if (btnSalvarCfg) {
     btnSalvarCfg.addEventListener('click', () => {
-      const url = document.getElementById('cfgSupabaseUrl').value.trim();
-      const key = document.getElementById('cfgSupabaseKey').value.trim();
-      const gemini = document.getElementById('cfgGeminiKey').value.trim();
-      const braveEl = document.getElementById('cfgBraveKey');
-      const brave = braveEl ? braveEl.value.trim() : '';
-      salvarConfiguracoes(url, key, gemini, brave);
+      salvarConfiguracoesApp();
     });
   }
 
@@ -398,14 +449,31 @@ function configurarEventosInterface() {
     });
   }
 
-  // Fechar modais ao clicar no overlay
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        fecharModalAtual();
+  // Adicionar termo de interesse no Enter
+  const inputInteresse = document.getElementById('inputNovoInteresse');
+  if (inputInteresse) {
+    inputInteresse.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        adicionarInteresseCustom();
       }
     });
-  });
+  }
+
+  // Adicionar cidade custom no Enter
+  const inputCidadeAlerta = document.getElementById('inputNovaCidadeAlerta');
+  if (inputCidadeAlerta) {
+    inputCidadeAlerta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        adicionarCidadeCustom();
+      }
+    });
+  }
+
+  // NOTA ERGONÔMICA: Modais NÃO fecham ao clicar no overlay para evitar
+  // toques acidentais e fechamento involuntário durante digitação.
+  // Fechamento exclusivo pelo botão X ou botão Voltar do dispositivo.
 }
 
 // ================= INICIALIZAÇÃO DA APLICAÇÃO =================

@@ -424,19 +424,54 @@ export function abrirOpcoesAgenda(concursoId) {
   refreshIcons();
 }
 
+export function toggleDetalhesCard(concursoId) {
+  const panel = document.getElementById(`detalhes-${concursoId}`);
+  const icon = document.getElementById(`icon-detalhes-${concursoId}`);
+  if (!panel) return;
+
+  const estaAberto = panel.style.display !== 'none';
+  if (estaAberto) {
+    panel.style.display = 'none';
+    if (icon) icon.setAttribute('data-lucide', 'chevron-down');
+  } else {
+    panel.style.display = 'flex';
+    if (icon) icon.setAttribute('data-lucide', 'chevron-up');
+  }
+  refreshIcons();
+}
+
 function renderizarListaCards(itens, isAbaAcompanhados = false) {
   if (itens.length === 0) {
+    if (isAbaAcompanhados) {
+      return `
+        <div class="empty-state">
+          <i data-lucide="bookmark" style="width: 42px; height: 42px; color: var(--text-dim);"></i>
+          <h3 style="color: var(--text); font-size: 15px; font-weight: 700;">Nenhum concurso acompanhado</h3>
+          <p style="font-size: 12.5px; color: var(--text-muted); max-width: 280px; text-align: center;">
+            Toque no ícone de salvar em qualquer concurso do Radar para monitorar prazos e convocações aqui.
+          </p>
+        </div>
+      `;
+    }
     return `
-      <div class="empty-state">
-        <i data-lucide="${isAbaAcompanhados ? 'bookmark' : 'search-x'}" style="width: 42px; height: 42px; color: var(--text-dim);"></i>
-        <h3 style="color: var(--text); font-size: 15px; font-weight: 700;">
-          ${isAbaAcompanhados ? 'Nenhum concurso acompanhado' : 'Nenhum certame localizado'}
-        </h3>
-        <p style="font-size: 12.5px; color: var(--text-muted); max-width: 280px; text-align: center;">
-          ${isAbaAcompanhados 
-            ? 'Toque em "Acompanhar" nos concursos do radar para monitorar prazos e convocações aqui.' 
-            : 'Tente alterar os filtros ou dispare uma Consulta Avulsa sob demanda com a IA.'}
+      <div class="empty-state-welcome">
+        <div class="empty-state-icon">
+          <i data-lucide="radar" style="width: 36px; height: 36px; color: #60a5fa;"></i>
+        </div>
+        <h3 style="color: #f8fafc; font-size: 16px; font-weight: 700; margin: 0;">Nenhum certame carregado</h3>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.45; text-align: center; max-width: 310px; margin: 0;">
+          Sua base está limpa. Pesquise editais e processos seletivos do seu município com a IA ou sincronize com o banco de dados.
         </p>
+        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 280px; margin-top: 6px;">
+          <button type="button" class="btn-modal-main" onclick="window.radarActions.abrirModalConsultaAvulsa()">
+            <i data-lucide="search" style="width: 15px; height: 15px;"></i>
+            <span>Buscar no Município</span>
+          </button>
+          <button type="button" class="btn-card-action" style="justify-content: center;" onclick="window.radarActions.sincronizarSupabase(true)">
+            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+            <span>Sincronizar Nuvem</span>
+          </button>
+        </div>
       </div>
     `;
   }
@@ -446,125 +481,122 @@ function renderizarListaCards(itens, isAbaAcompanhados = false) {
     const statusClass = getStatusBadgeClass(c.status);
     const brasaoSvg = gerarSvgBrasao(c.cidade);
 
-    const cargosHtml = (c.cargos || []).map(cargo => {
-      const isLicit = /licitaç|compras|contrato|pregoeiro|trânsito/i.test(cargo);
-      return `<span class="cargo-chip ${isLicit ? 'highlight' : ''}">${escapeHtml(cargo)}</span>`;
+    const interesses = state.config.interesses || [];
+    const cargosHtml = (c.cargos || []).slice(0, 4).map(cargo => {
+      const isInteresse = interesses.length > 0 && interesses.some(term => {
+        const t = term.trim().toLowerCase();
+        return t && cargo.toLowerCase().includes(t);
+      });
+      return `<span class="cargo-chip ${isInteresse ? 'match-interesse' : ''}">${escapeHtml(cargo)}</span>`;
     }).join('');
 
+    const maisCargosCount = (c.cargos || []).length > 4 ? (c.cargos.length - 4) : 0;
+
     const score = typeof c.confianca_score === 'number' ? c.confianca_score : 85;
-    const trustClass = score >= 85 ? 'trust-high' : (score >= 60 ? 'trust-medium' : 'trust-low');
-    const rotulo = c.confianca_rotulo || (score >= 85 ? 'Oficial Verificado' : 'Auditado');
-    const trustBadge = `
-      <span class="trust-badge ${trustClass}" title="Auditoria Documental: ${score}% de confiabilidade">
-        <span class="trust-dot"></span>
-        <span>${score}% ${escapeHtml(rotulo)}</span>
-      </span>
-    `;
-
-    const bancaBadge = c.banca ? `
-      <span class="banca-badge" title="Banca Examinadora Oficial Reconhecida">
-        <i data-lucide="building-2" style="width: 11px; height: 11px;"></i>
-        <span>${escapeHtml(c.banca)}</span>
-      </span>
-    ` : '';
-
-    const faseBadge = c.fase_detalhada ? `
-      <span class="fase-pill" title="Estágio Formal do Concurso">
-        <i data-lucide="info" style="width: 10px; height: 10px;"></i>
-        <span>${escapeHtml(c.fase_detalhada)}</span>
-      </span>
-    ` : '';
+    const rotulo = c.confianca_rotulo || 'Oficial Verificado';
 
     const linkOficialBtn = c.link_oficial ? `
-      <a href="${escapeHtml(c.link_oficial)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary" title="Acessar portal da banca examinadora ou edital oficial">
-        <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+      <a href="${escapeHtml(c.link_oficial)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary" title="Acessar edital ou portal oficial">
+        <i data-lucide="external-link" style="width: 13px; height: 13px;"></i>
         <span>${escapeHtml(c.banca ? `Banca (${c.banca})` : 'Edital Oficial')}</span>
       </a>
     ` : '';
 
     return `
       <div class="concurso-card" data-id="${escapeHtml(c.id)}">
-        <!-- Linha 1: Brasão + Cidade + Badges de Auditoria + Acompanhar -->
-        <div class="card-header-row">
+        <!-- Linha 1: Brasão + Cidade + Status + Acompanhar -->
+        <div class="card-header-compact">
           <div class="city-crest-group">
             ${brasaoSvg}
-            <div>
-              <div class="city-name">${escapeHtml(c.cidade)}</div>
-              <div class="card-badges-row">
-                <span class="status-badge ${statusClass}">
-                  <span class="pulse-dot"></span>
-                  ${escapeHtml(c.status)}
-                </span>
-                ${trustBadge}
-                ${bancaBadge}
-                ${faseBadge}
-              </div>
+            <div class="city-info-col">
+              <span class="city-name">${escapeHtml(c.cidade)}</span>
+              <span class="banca-discreet">${escapeHtml(c.banca || 'Órgão Municipal')} • ${score}% ${escapeHtml(rotulo)}</span>
             </div>
           </div>
 
-          <button class="btn-track ${isTracking ? 'active' : ''}" onclick="window.radarActions.toggleAcompanhar('${escapeHtml(c.id)}')">
-            <i data-lucide="${isTracking ? 'bookmark-check' : 'bookmark'}" style="width: 15px; height: 15px;"></i>
-            <span>${isTracking ? 'Acompanhando' : 'Acompanhar'}</span>
-          </button>
+          <div class="card-header-actions">
+            <span class="status-badge ${statusClass}">
+              <span class="pulse-dot"></span>
+              ${escapeHtml(c.status)}
+            </span>
+            <button class="btn-track-icon ${isTracking ? 'active' : ''}" 
+              onclick="window.radarActions.toggleAcompanhar('${escapeHtml(c.id)}')" 
+              title="${isTracking ? 'Acompanhando' : 'Acompanhar'}">
+              <i data-lucide="${isTracking ? 'bookmark-check' : 'bookmark'}" style="width: 15px; height: 15px;"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Linha 2: Título + Órgão + Cargos -->
-        <div class="card-body-row">
-          <h2 class="concurso-title">${escapeHtml(c.titulo)}</h2>
+        <div class="card-body-compact">
+          <h3 class="concurso-title">${escapeHtml(c.titulo)}</h3>
           <div class="concurso-orgao">
-            <i data-lucide="landmark" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
+            <i data-lucide="landmark" style="width: 12px; height: 12px; color: var(--text-dim);"></i>
             <span>${escapeHtml(c.orgao)}</span>
           </div>
-          <div class="cargos-wrap">
-            ${cargosHtml}
+          ${cargosHtml ? `
+            <div class="cargos-wrap">
+              ${cargosHtml}
+              ${maisCargosCount > 0 ? `<span class="cargo-chip-more">+${maisCargosCount}</span>` : ''}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Linha 3: Vencimento & Inscrição Compactos -->
+        <div class="meta-row-compact">
+          <div class="meta-item-compact">
+            <i data-lucide="banknote" style="width: 12px; height: 12px; color: #34d399;"></i>
+            <span>${escapeHtml(c.salario_resumo || 'A consultar')}</span>
+          </div>
+          <div class="meta-item-compact">
+            <i data-lucide="calendar" style="width: 12px; height: 12px; color: #60a5fa;"></i>
+            <span>${escapeHtml(c.prazo_inscricao || 'Consultar edital')}</span>
           </div>
         </div>
 
-        <!-- Linha 3: Meta Grid & Resumo IA -->
-        <div class="meta-grid">
-          <div class="meta-item">
-            <i data-lucide="coins" style="width: 15px; height: 15px; color: #34d399;"></i>
-            <span>Vencimento: <strong>${escapeHtml(c.salario_resumo || 'A consultar')}</strong></span>
-          </div>
-          <div class="meta-item">
-            <i data-lucide="calendar" style="width: 15px; height: 15px; color: #60a5fa;"></i>
-            <span>Inscrições: <strong>${escapeHtml(c.prazo_inscricao || 'Consultar edital')}</strong></span>
-          </div>
-        </div>
-
-        <!-- Linha 3.5: Linha do Tempo das Etapas Oficiais & Contagem Regressiva -->
-        ${renderTimelineStepper(c)}
         ${renderCountdownBadges(c)}
 
-        ${c.resumo_ia ? `
-          <div class="ai-summary-box">
-            <div class="ai-summary-tag">
-              <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
-              Análise Técnica do Radar
-            </div>
-            ${escapeHtml(c.resumo_ia)}
-          </div>
-        ` : ''}
-
-        <!-- Linha 4: Ações Operacionais -->
+        <!-- Linha 4: Ações Primárias -->
         <div class="card-actions-row">
-          <button class="btn-card-action" onclick="window.radarActions.abrirModalPortais('${escapeHtml(c.cidade)}')">
-            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
-            <span>Portais da Cidade</span>
-          </button>
           ${linkOficialBtn}
           <button class="btn-card-action study" onclick="window.radarActions.abrirModalPlano('${escapeHtml(c.id)}')">
-            <i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i>
-            <span>Plano de Estudos</span>
+            <i data-lucide="graduation-cap" style="width: 13px; height: 13px;"></i>
+            <span>Plano</span>
           </button>
-          <button class="btn-card-action calendar" onclick="window.radarActions.abrirOpcoesAgenda('${escapeHtml(c.id)}')">
-            <i data-lucide="calendar-plus" style="width: 14px; height: 14px;"></i>
-            <span>Agenda</span>
+          <button class="btn-card-action details-toggle" onclick="window.radarActions.toggleDetalhesCard('${escapeHtml(c.id)}')">
+            <i data-lucide="chevron-down" style="width: 13px; height: 13px;" id="icon-detalhes-${escapeHtml(c.id)}"></i>
+            <span>Detalhes</span>
           </button>
-          <button class="btn-card-action share" onclick="window.radarActions.compartilharConcurso('${escapeHtml(c.id)}')">
-            <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
-            <span>Compartilhar</span>
-          </button>
+        </div>
+
+        <!-- Painel Expansível de Detalhes (sob demanda) -->
+        <div class="card-details-panel" id="detalhes-${escapeHtml(c.id)}" style="display: none;">
+          ${renderTimelineStepper(c)}
+
+          ${c.resumo_ia ? `
+            <div class="ai-summary-box">
+              <div class="ai-summary-tag">
+                <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>
+                Análise do Edital
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.4;">${escapeHtml(c.resumo_ia)}</p>
+            </div>
+          ` : ''}
+
+          <div class="details-subactions">
+            <button type="button" class="btn-subaction" onclick="window.radarActions.abrirOpcoesAgenda('${escapeHtml(c.id)}')">
+              <i data-lucide="calendar-plus" style="width: 12px; height: 12px; color: #a78bfa;"></i>
+              <span>Agenda (.ics)</span>
+            </button>
+            <button type="button" class="btn-subaction" onclick="window.radarActions.abrirModalPortais('${escapeHtml(c.cidade)}')">
+              <i data-lucide="landmark" style="width: 12px; height: 12px; color: #60a5fa;"></i>
+              <span>Portais</span>
+            </button>
+            <button type="button" class="btn-subaction" onclick="window.radarActions.compartilharConcurso('${escapeHtml(c.id)}')">
+              <i data-lucide="share-2" style="width: 12px; height: 12px; color: #34d399;"></i>
+              <span>Compartilhar</span>
+            </button>
+          </div>
         </div>
       </div>
     `;

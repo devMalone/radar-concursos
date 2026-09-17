@@ -1,48 +1,36 @@
-// js/consulta.js — Pipeline Desacoplado: Fast Path (Auditado) vs Deep Path (Investigativo Web)
+// js/consulta.js — Motor de Busca Investigativa de Editais via Gemini Grounding
 
 import { state, salvarLocal, sanitizarItemConcurso } from './state.js';
-import { abrirModal, fecharModal, mostrarToast } from './utils.js';
+import { abrirModal, fecharModalAtual, mostrarToast, escapeHtml } from './utils.js';
 import { renderizarRadar } from './radar.js';
 import { PORTAIS_CIDADES, BANCAS_OFICIAIS } from './portais.js';
-
-let modoConsultaSelecionado = 'fast'; // 'fast' ou 'deep'
 
 export function abrirModalConsultaAvulsa() {
   const form = document.getElementById('consultaForm');
   const loading = document.getElementById('consultaLoading');
+  const statusBox = document.getElementById('consultaStatusFeedback');
+
   if (form) form.style.display = 'block';
   if (loading) loading.style.display = 'none';
+  if (statusBox) statusBox.style.display = 'none';
 
-  setModoConsulta('fast');
+  // Se houver cidade selecionada no filtro principal, pré-preenche
+  const inputCidade = document.getElementById('avulsoCidade');
+  if (inputCidade && state.filtroCidade) {
+    inputCidade.value = state.filtroCidade;
+  }
+
   abrirModal('modalConsultaAvulsa');
 }
 
-export function setModoConsulta(modo) {
-  modoConsultaSelecionado = modo;
-  const btnFast = document.getElementById('btnModoFast');
-  const btnDeep = document.getElementById('btnModoDeep');
-  const btnAcao = document.getElementById('btnDispararConsulta');
+export function resetarFormularioConsulta() {
+  const form = document.getElementById('consultaForm');
+  const loading = document.getElementById('consultaLoading');
+  const statusBox = document.getElementById('consultaStatusFeedback');
 
-  if (btnFast && btnDeep) {
-    btnFast.classList.toggle('active', modo === 'fast');
-    btnDeep.classList.toggle('active', modo === 'deep');
-  }
-
-  if (btnAcao) {
-    if (modo === 'fast') {
-      btnAcao.innerHTML = `
-        <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
-        <span>Consultar Base Auditada (Instantâneo)</span>
-      `;
-    } else {
-      btnAcao.innerHTML = `
-        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
-        <span>Iniciar Varredura Profunda (Deep Scan)</span>
-      `;
-    }
-  }
-
-  if (window.lucide) window.lucide.createIcons();
+  if (form) form.style.display = 'block';
+  if (loading) loading.style.display = 'none';
+  if (statusBox) statusBox.style.display = 'none';
 }
 
 export async function executarConsultaAvulsaLive() {
@@ -57,147 +45,27 @@ export async function executarConsultaAvulsaLive() {
     return;
   }
 
-  if (modoConsultaSelecionado === 'fast') {
-    await executarFastPath(cidade, cargo);
-  } else {
-    await executarDeepPath(cidade, cargo);
-  }
-}
-
-// 1. FAST PATH: Consulta direta na base auditada sem custo de tokens e latência zero
-async function executarFastPath(cidade, cargo) {
-  const cidLower = cidade.toLowerCase();
-  const cargoLower = cargo.toLowerCase();
-
-  // Busca em cache local
-  const encontradosLocais = state.concursos.filter(c => {
-    const cCidade = (c.cidade || '').toLowerCase();
-    const matchCidade = cCidade.includes(cidLower) || cidLower.includes(cCidade);
-    if (!matchCidade) return false;
-
-    if (cargoLower) {
-      const texto = `${c.titulo} ${(c.cargos || []).join(' ')} ${(c.areas || []).join(' ')} ${c.resumo_ia || ''}`.toLowerCase();
-      return texto.includes(cargoLower);
-    }
-    return true;
-  });
-
-  if (encontradosLocais.length > 0) {
-    fecharModal('modalConsultaAvulsa');
-    state.filtroCidade = cidade;
-    const selectCidade = document.getElementById('selectCidade');
-    if (selectCidade) selectCidade.value = cidade;
-    renderizarRadar();
-    mostrarToast(`⚡ Fast Path: ${encontradosLocais.length} certame(s) auditado(s) localizado(s) instantaneamente!`, 'success');
-    return;
-  }
-
-  // Se não encontrado localmente e Supabase estiver conectado, tenta sincronizar
-  if (state.supabase) {
-    try {
-      mostrarToast('Buscando na base em nuvem auditada...', 'info');
-      const { data, error } = await state.supabase
-        .from('concursos')
-        .select('*')
-        .ilike('cidade', `%${cidade}%`);
-
-      if (!error && data && data.length > 0) {
-        data.forEach(inc => {
-          const idx = state.concursos.findIndex(c => c.id === inc.id);
-          if (idx >= 0) state.concursos[idx] = sanitizarItemConcurso(inc);
-          else state.concursos.unshift(sanitizarItemConcurso(inc));
-        });
-        salvarLocal();
-        state.filtroCidade = cidade;
-        const selectCidade = document.getElementById('selectCidade');
-        if (selectCidade) selectCidade.value = cidade;
-        renderizarRadar();
-        fecharModal('modalConsultaAvulsa');
-        mostrarToast(`⚡ Base auditada atualizada: ${data.length} certame(s) encontrado(s)!`, 'success');
-        return;
-      }
-    } catch (e) {
-      console.warn('[Fast Path Nuvem]', e);
-    }
-  }
-
-  // Se não há dados na base auditada, convida o usuário para a auditoria profunda
-  mostrarToast(`Nenhum certame registrado para ${cidade}. Alternando para Modo Auditoria Profunda...`, 'info');
-  setModoConsulta('deep');
-}
-
-// Consulta em tempo real à API da Brave Search (Multi-Engine)
-export async function consultarBraveSearch(query, apiKey) {
-  if (!apiKey || !query) return [];
-
-  try {
-    const endpoint = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pm&country=BR&search_lang=pt`;
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'X-Subscription-Token': apiKey
-      }
-    });
-
-    if (!response.ok) {
-      console.warn('[Brave Search] Status:', response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    const results = data?.web?.results || [];
-
-    return results.map(r => ({
-      title: r.title || '',
-      url: r.url || '',
-      description: r.description || '',
-      age: r.page_age || ''
-    }));
-  } catch (err) {
-    console.warn('[Brave Search Error]', err);
-    return [];
-  }
-}
-
-// 2. DEEP PATH: Varredura investigativa na web com Gemini 3.6 Flash + Multi-Engine Grounding
-async function executarDeepPath(cidade, cargo) {
   const apiKey = state.config.geminiKey;
   if (!apiKey) {
-    mostrarToast('Chave Gemini API não cadastrada. Insira na aba Ajustes.', 'error');
+    mostrarToast('Chave Gemini API não configurada. Insira na aba Ajustes.', 'error');
     return;
   }
 
   const form = document.getElementById('consultaForm');
   const loading = document.getElementById('consultaLoading');
+  const statusBox = document.getElementById('consultaStatusFeedback');
+
   if (form) form.style.display = 'none';
+  if (statusBox) statusBox.style.display = 'none';
   if (loading) loading.style.display = 'flex';
 
   const dataAtual = new Date();
   const hojeStr = dataAtual.toLocaleDateString('pt-BR');
   const anoAtual = dataAtual.getFullYear();
 
-  // Multi-Engine: Executa busca primária na Brave Search se houver chave configurada
-  let evidenciasBraveTexto = '';
-  const braveKey = state.config.braveKey;
-
-  if (braveKey) {
-    try {
-      const qBrave = `concurso publico prefeitura ${cidade} SP ${cargo || '2026'}`;
-      const snippetsBrave = await consultarBraveSearch(qBrave, braveKey);
-      if (snippetsBrave.length > 0) {
-        evidenciasBraveTexto = `\nEVIDÊNCIAS COLETADAS EM TEMPO REAL VIA BRAVE SEARCH (Recência últimos 30 dias):\n` +
-          snippetsBrave.map((s, idx) => `[Fonte ${idx + 1}] ${s.title}\nLink: ${s.url}\nResumo: ${s.description}`).join('\n\n') +
-          '\n\nUtilize prioritariamente as informações e links oficiais confirmados acima.';
-      }
-    } catch (e) {
-      console.warn('[Multi-Engine Brave]', e);
-    }
-  }
-
   const portaisConhecidos = PORTAIS_CIDADES[cidade];
   const contextoPortal = portaisConhecidos 
-    ? `Portais oficiais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}`
+    ? `Portais oficiais conhecidos do município: Prefeitura: ${portaisConhecidos.site}, Concursos: ${portaisConhecidos.concursos}, Diário Oficial: ${portaisConhecidos.diario}`
     : '';
 
   const bancasTexto = Object.values(BANCAS_OFICIAIS)
@@ -206,33 +74,32 @@ async function executarDeepPath(cidade, cargo) {
 
   const prompt = `Você é um auditor e pesquisador sênior especializado em diários oficiais e concursos públicos no estado de São Paulo.
 Faça uma pesquisa rigorosa na web com o Google Search sobre concursos públicos, processos seletivos e contratação de bancas examinadoras para o município de: ${cidade} - SP.
-Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Segurança'}.
+Foco de interesse: ${cargo || 'Geral / Administrativo / Licitações / Saúde / Educação'}.
 
 ${contextoPortal}
 Bancas Oficiais Reconhecidas no Estado de SP: ${bancasTexto}.
-${evidenciasBraveTexto}
 
 DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
 
 ⚠️ DIRETRIZES DE AUDITORIA PÚBLICA E ANTI-ALUCINAÇÃO (MÁXIMA RIGIDEZ):
 1. VIGÊNCIA DE CONCURSOS E CADASTRO DE RESERVA (CF/88 art. 37):
    - Concursos homologados possuem validade legal de 2 anos (prorrogáveis por mais 2).
-   - Enquanto um concurso estiver vigente (como o Concurso Geral nº 01/2025 da Vunesp em Rio Preto com 506 vagas, ou o Concurso GCM nº 01/2024 da Vunesp em fase de Curso de Formação), o município convoca os aprovados e NÃO pode abrir novo concurso para os mesmos cargos.
-   - NUNCA invente que a prefeitura "está estudando novo certame" ou classifique como "Previsto" a menos que exista comprovação documental no Diário Oficial (portaria de comissão organizadora instituída ou autorização expressa do Prefeito).
-   - Se o concurso recente estiver vigente ou em etapas de nomeação/curso de formação, relate a realidade com precisão: que o concurso está em andamento/vigente chamando os aprovados, e que não há novo certame oficialmente autorizado.
+   - Enquanto um concurso estiver vigente ou em etapas de chamamento de aprovados, relate a realidade documental.
+   - NUNCA invente certames "Previstos" sem portaria de comissão organizadora formal ou autorização do Prefeito publicada em Diário Oficial.
+   - Se houver concurso vigente com convocações em andamento, informe o status exato.
 
 2. VERIFICAÇÃO RIGOROSA DO STATUS:
-   - "Edital Aberto": EXCLUSIVO para certames onde as inscrições estejam formalmente abertas HOJE para novos candidatos (data limite de inscrição >= ${hojeStr}).
-   - "Em Andamento (Recursos / Gabarito)": Use para certames cujas provas já foram realizadas ou inscrições fecharam, e estão em fase de recursos, gabaritos, classificação, curso de formação ou convocações de aprovados.
-   - "Licitação": Quando o município abriu processo formal no Diário Oficial para contratar banca examinadora (pregão ou dispensa).
-   - "Previsto": SOMENTE com ato oficial de comissão formada publicado em Diário Oficial.
-   - "Cancelado / Suspenso": Certames com atos revogados ou suspensos judicialmente.
+   - "Edital Aberto": EXCLUSIVO para certames onde as inscrições estejam formalmente abertas HOJE para novos candidatos (data limite >= ${hojeStr}).
+   - "Em Andamento (Recursos / Gabarito)": Certames cujas inscrições fecharam ou provas foram aplicadas, e estão em fase de recursos, gabaritos, homologação ou convocações.
+   - "Licitação": Quando o município abriu processo formal no Diário Oficial para contratar banca examinadora.
+   - "Previsto": SOMENTE com ato oficial publicado em Diário Oficial.
+   - "Cancelado / Suspenso": Certames com atos suspensos ou revogados.
 
-⚠️ REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
-- Retorne links REAIS e que funcionem ao clicar:
-  - O link oficial da banca organizadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br, etc.)
-  - OU o portal oficial de concursos/serviços da prefeitura.
-- NUNCA invente rotas falsas (como /licitacoes, /concursos-2024) que geram tela de erro 404. Se não encontrar o link profundo exato do PDF, retorne a página principal de concursos do município ou da banca.
+3. REGRAS DE LINKS FUNCIONAIS (PROIBIDO LINKS QUEBRADOS):
+   - Retorne links REAIS e que funcionem ao clicar:
+     - O link oficial da banca organizadora (ex: vunesp.com.br, ibamsp-concursos.org.br, institutoconsulplan.org.br, etc.)
+     - OU o portal oficial de concursos/serviços da prefeitura.
+   - NUNCA invente rotas falsas (como /licitacoes, /concursos-2024) que geram tela 404.
 
 Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
 [
@@ -253,23 +120,8 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
 ]`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }]
-      })
-    });
+    const candidateText = await chamarGeminiGrounding(apiKey, prompt);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
     // Limpa delimitadores de bloco JSON
     const clean = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
     const sIdx = clean.indexOf('[');
@@ -277,15 +129,14 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
 
     if (sIdx !== -1 && eIdx !== -1) {
       const parsedItems = JSON.parse(clean.substring(sIdx, eIdx + 1));
-      if (parsedItems.length > 0) {
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
         parsedItems.forEach(rawItem => {
-          // Passa pelo filtro sanitizador rigoroso com escore e reparo de links
           const item = sanitizarItemConcurso(rawItem);
           item.id = `avulso_${cidade}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
           item.updated_at = new Date().toISOString();
           
           // Se já existir certame com mesmo título, atualiza; senão insere no topo
-          const existingIdx = state.concursos.findIndex(c => c.titulo.toLowerCase() === item.titulo.toLowerCase());
+          const existingIdx = state.concursos.findIndex(c => (c.titulo || '').toLowerCase() === (item.titulo || '').toLowerCase());
           if (existingIdx !== -1) {
             state.concursos[existingIdx] = item;
           } else {
@@ -294,19 +145,90 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
         });
 
         salvarLocal();
+        state.filtroCidade = cidade;
+        const selectCidade = document.getElementById('selectCidade');
+        if (selectCidade) selectCidade.value = cidade;
+
         renderizarRadar();
-        fecharModal('modalConsultaAvulsa');
-        mostrarToast(`🔬 Deep Scan: ${parsedItems.length} certame(s) auditado(s) com sucesso!`, 'success');
+        fecharModalAtual();
+        mostrarToast(`🔍 ${parsedItems.length} certame(s) localizado(s) para ${cidade}!`, 'success');
         return;
       }
     }
-    
-    fecharModal('modalConsultaAvulsa');
-    mostrarToast('Varredura concluída. Nenhuma publicação recente localizada para este critério.', 'info');
+
+    // Se nenhum item foi parseado
+    mostrarFeedbackConsulta(
+      'Nenhum certame localizado',
+      `Não foram encontradas publicações recentes de concursos ou processos seletivos para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.`,
+      'info'
+    );
   } catch (err) {
-    console.warn('[Deep Scan] Erro:', err);
-    fecharModal('modalConsultaAvulsa');
-    mostrarToast('Falha na comunicação com o Gemini. Verifique a chave ou tente em instantes.', 'error');
+    console.warn('[Consulta Gemini Grounding] Erro:', err);
+    mostrarFeedbackConsulta(
+      'Falha na Comunicação',
+      `Não foi possível concluir a busca online no momento. Detalhe: ${escapeHtml(err.message || 'Erro de rede ou chave API')}. Verifique sua conexão e a chave Gemini API em Ajustes.`,
+      'error'
+    );
   }
 }
 
+// Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
+async function chamarGeminiGrounding(apiKey, prompt) {
+  const modelos = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  let ultimoErro = null;
+
+  for (const modelo of modelos) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (candidateText) {
+          return candidateText;
+        }
+      } else {
+        const errBody = await response.text();
+        console.warn(`[Gemini ${modelo}] HTTP ${response.status}:`, errBody);
+        ultimoErro = new Error(`HTTP ${response.status}`);
+      }
+    } catch (e) {
+      console.warn(`[Gemini ${modelo}] Exceção:`, e);
+      ultimoErro = e;
+    }
+  }
+
+  throw ultimoErro || new Error('Não foi possível obter resposta dos servidores da IA.');
+}
+
+function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info') {
+  const loading = document.getElementById('consultaLoading');
+  const statusBox = document.getElementById('consultaStatusFeedback');
+  if (loading) loading.style.display = 'none';
+
+  if (statusBox) {
+    statusBox.style.display = 'flex';
+    statusBox.innerHTML = `
+      <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0;">
+        <i data-lucide="${tipo === 'error' ? 'alert-triangle' : 'info'}" style="width: 32px; height: 32px; color: ${tipo === 'error' ? '#ef4444' : '#60a5fa'};"></i>
+        <h4 style="color: var(--text); font-size: 15px; font-weight: 700; margin: 0;">${escapeHtml(titulo)}</h4>
+        <p style="color: var(--text-muted); font-size: 12.5px; line-height: 1.45; margin: 0; max-width: 320px;">
+          ${mensagem}
+        </p>
+        <button type="button" class="btn-card-action" onclick="window.radarActions.resetarFormularioConsulta()" style="margin-top: 8px;">
+          <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+          <span>Voltar ao Formulário</span>
+        </button>
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  }
+}

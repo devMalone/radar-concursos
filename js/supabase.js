@@ -126,11 +126,13 @@ export async function testarConexaoSupabase(url, key) {
   }
 }
 
-export function salvarConfiguracoes(url, key, geminiKey, braveKey) {
+export function salvarConfiguracoes(url, key, geminiKey, interessesArray = null) {
   state.config.supabaseUrl = url;
   state.config.supabaseKey = key;
   state.config.geminiKey = geminiKey;
-  state.config.braveKey = braveKey || '';
+  if (Array.isArray(interessesArray)) {
+    state.config.interesses = interessesArray;
+  }
 
   salvarLocal();
   iniciarSupabase();

@@ -652,11 +652,11 @@
   border-radius: 6px;
 }
 
-.cargo-chip.highlight {
-  background: var(--gold-glow);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: #fde68a;
-  font-weight: 700;
+.cargo-chip.match-interesse {
+  background: rgba(6, 182, 212, 0.16);
+  border-color: rgba(6, 182, 212, 0.45);
+  color: #67e8f9;
+  font-weight: 600;
 }
 
 /* Linha 3: Meta Grid & Resumo IA */
@@ -1042,3 +1042,211 @@
   border-color: var(--primary);
   transform: translateY(-1px);
 }
+
+/* ================= COMPACT CARD REDESIGN (v13) ================= */
+.card-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.city-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.banca-discreet {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-track-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-track-icon:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.btn-track-icon.active {
+  background: var(--gold-glow);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fde68a;
+}
+
+.card-body-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-body-compact .concurso-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.card-body-compact .concurso-orgao {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cargo-chip-more {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-weight: 600;
+  align-self: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.meta-row-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #090e1a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.meta-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.card-details-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  animation: fadeIn 0.2s ease;
+}
+
+.details-subactions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-subaction {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-subaction:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.btn-card-action.details-toggle {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn-card-action.details-toggle:hover {
+  color: var(--text);
+  border-color: #3b82f6;
+}
+
+/* ================= ZERO-STATE WELCOME ================= */
+.empty-state-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.empty-state-welcome .empty-state-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================= CHIPS DE INTERESSES EM AJUSTES ================= */
+.interesse-chip-item {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-remove-chip {
+  background: none;
+  border: none;
+  color: #7dd3fc;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.btn-remove-chip:hover {
+  color: #ef4444;
+}
+
