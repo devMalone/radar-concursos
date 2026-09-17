@@ -32,7 +32,8 @@ import {
   abrirModalConsultaAvulsa, 
   executarConsultaAvulsaLive,
   resetarFormularioConsulta,
-  resetarCacheModelos
+  resetarCacheModelos,
+  testarChaveGemini
 } from './consulta.js';
 import { 
   iniciarSupabase, 
@@ -40,6 +41,19 @@ import {
   testarConexaoSupabase, 
   salvarConfiguracoes 
 } from './supabase.js';
+
+// Redireciona o usuário para Ajustes e foca no campo da chave Gemini
+export function irParaAjustesETestarChave() {
+  fecharModalAtual();
+  mudarAba('tab-config');
+  setTimeout(() => {
+    const geminiInput = document.getElementById('cfgGeminiKey');
+    if (geminiInput) {
+      geminiInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      geminiInput.focus();
+    }
+  }, 150);
+}
 
 // Expõe ações globais para cliques inline no HTML
 window.radarActions = {
@@ -59,6 +73,8 @@ window.radarActions = {
   sincronizarSupabase,
   testarConexaoSupabase,
   salvarConfiguracoes: salvarConfiguracoesApp,
+  testarChaveGemini,
+  irParaAjustesETestarChave,
   ativarNotificacoes,
   testarNotificacaoNativa,
   toggleCidadeAlerta,
@@ -483,6 +499,30 @@ function configurarEventosInterface() {
     });
   }
 
+  // Testar conexão Gemini AI
+  const btnTestarGemini = document.getElementById('btnTestarGemini');
+  if (btnTestarGemini) {
+    btnTestarGemini.addEventListener('click', () => {
+      testarChaveGemini();
+    });
+  }
+
+  // Auto-salvar Gemini API Key imediatamente ao digitar, colar ou sair do campo
+  const inputGemini = document.getElementById('cfgGeminiKey');
+  if (inputGemini) {
+    const autoSalvarGemini = () => {
+      const val = inputGemini.value.trim().replace(/^["']|["']$/g, '');
+      if (state.config.geminiKey !== val) {
+        state.config.geminiKey = val;
+        localStorage.setItem('radar_gemini_key', val);
+        resetarCacheModelos();
+      }
+    };
+    inputGemini.addEventListener('input', autoSalvarGemini);
+    inputGemini.addEventListener('change', autoSalvarGemini);
+    inputGemini.addEventListener('blur', autoSalvarGemini);
+  }
+
   // Adicionar termo de interesse no Enter
   const inputInteresse = document.getElementById('inputNovoInteresse');
   if (inputInteresse) {
@@ -528,11 +568,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   await sincronizarSupabase(false);
 });
 
-// Registro do Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => {
-      console.warn('[Service Worker] Registro:', err);
+// Registro e Ciclo de Vida do Service Worker (v20)
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+  if (typeof navigator.serviceWorker.addEventListener === 'function') {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('[Service Worker] Nova versão ativada no dispositivo.');
     });
-  });
+  }
+
+  if (typeof navigator.serviceWorker.register === 'function') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        // Dispara verificação ativa de nova versão a cada abertura
+        if (reg && typeof reg.update === 'function') {
+          reg.update().catch(() => {});
+        }
+      }).catch(err => {
+        console.warn('[Service Worker] Registro:', err);
+      });
+    });
+  }
 }

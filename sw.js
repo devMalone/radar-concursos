@@ -1,5 +1,5 @@
-// Service Worker — Radar de Concursos PWA (Padrão Casa do Sagrado v19)
-const CACHE_NAME = 'radar-concursos-v19';
+// Service Worker — Radar de Concursos PWA (Padrão Casa do Sagrado v20)
+const CACHE_NAME = 'radar-concursos-v20';
 
 const STATIC_ASSETS = [
   './',
@@ -29,16 +29,15 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.map((k) => k !== CACHE_NAME && caches.delete(k)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // Network-First para HTML, CSS e JS (garante atualizações imediatas em produção)
+  // Network-First para HTML, CSS e JS (garante atualizações imediatas em produção sem cache estagnado)
   if (
     e.request.mode === 'navigate' || 
     url.pathname.endsWith('.html') || 
@@ -47,7 +46,7 @@ self.addEventListener('fetch', (e) => {
     url.pathname.endsWith('.css')
   ) {
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, { cache: 'no-cache' })
         .then((res) => {
           if (res.status === 200) {
             const clone = res.clone();

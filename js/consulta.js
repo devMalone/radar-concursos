@@ -286,11 +286,203 @@ export function resetarCacheModelos() {
   cacheModelosValidos = null;
 }
 
+// Testa a chave Gemini do usuário diretamente na interface com feedback detalhado
+export async function testarChaveGemini(apiKeyManual = null) {
+  const statusEl = document.getElementById('geminiTestStatus');
+  const btnTestar = document.getElementById('btnTestarGemini');
+  
+  // 1. Obtém e limpa a chave
+  const inputEl = document.getElementById('cfgGeminiKey');
+  let rawKey = '';
+  if (apiKeyManual !== null && apiKeyManual !== undefined) {
+    rawKey = apiKeyManual;
+  } else if (inputEl && inputEl.value) {
+    rawKey = inputEl.value;
+  } else if (state.config.geminiKey) {
+    rawKey = state.config.geminiKey;
+  }
+  const apiKey = (rawKey || '').trim().replace(/^["']|["']$/g, '');
+
+  if (!apiKey) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 12px; color: #fca5a5; font-size: 12px; display: flex; gap: 8px; align-items: flex-start;">
+          <i data-lucide="alert-triangle" style="width: 16px; height: 16px; flex-shrink: 0; color: #ef4444; margin-top: 1px;"></i>
+          <span>Por favor, insira sua <strong>Gemini API Key</strong> no campo acima antes de testar.</span>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
+    mostrarToast('Insira a chave da Gemini API antes de testar.', 'error');
+    return false;
+  }
+
+  // 2. Salva imediatamente no estado e no localStorage
+  state.config.geminiKey = apiKey;
+  localStorage.setItem('radar_gemini_key', apiKey);
+  resetarCacheModelos();
+
+  // 3. Feedback visual de carregamento
+  if (btnTestar) {
+    btnTestar.disabled = true;
+    btnTestar.innerHTML = `<i data-lucide="loader-2" class="spin" style="width: 14px; height: 14px;"></i><span>Consultando Google AI...</span>`;
+    if (window.lucide) window.lucide.createIcons();
+  }
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `
+      <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 10px 12px; color: #93c5fd; font-size: 12px; display: flex; gap: 8px; align-items: center;">
+        <i data-lucide="loader-2" class="spin" style="width: 16px; height: 16px; flex-shrink: 0; color: #60a5fa;"></i>
+        <span>Consultando catálogo de modelos autorizados na sua chave Google...</span>
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  try {
+    // 4. Executa ListModels em v1beta e v1
+    const modelosUnicos = [];
+    const nomesVistos = new Set();
+    let ultimoErro = null;
+
+    for (const apiVer of ['v1beta', 'v1']) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/${apiVer}/models?key=${apiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.models)) {
+            for (const m of data.models) {
+              const methods = m.supportedGenerationMethods || [];
+              if (methods.includes('generateContent')) {
+                const cleanName = m.name.replace(/^models\//, '');
+                if (!nomesVistos.has(cleanName)) {
+                  nomesVistos.add(cleanName);
+                  modelosUnicos.push({ apiVer, name: cleanName });
+                }
+              }
+            }
+          }
+        } else {
+          const errBody = await res.text();
+          let msg = `HTTP ${res.status}`;
+          try {
+            const j = JSON.parse(errBody);
+            if (j?.error?.message) msg = j.error.message;
+          } catch (_) {}
+          ultimoErro = msg;
+        }
+      } catch (err) {
+        ultimoErro = err.message || 'Falha de conexão';
+      }
+    }
+
+    if (modelosUnicos.length === 0) {
+      throw new Error(ultimoErro ? `Google API: ${ultimoErro}` : 'Nenhum modelo compatível com geração de conteúdo foi encontrado para esta chave.');
+    }
+
+    // Prioriza modelos flash rápidos e modernos
+    modelosUnicos.sort((a, b) => {
+      const score = (m) => {
+        const n = m.name.toLowerCase();
+        if (n.includes('flash') && (n.includes('2.0') || n.includes('2.5') || n.includes('3.5'))) return 100;
+        if (n.includes('flash')) return 90;
+        if (n.includes('pro')) return 50;
+        return 10;
+      };
+      return score(b) - score(a);
+    });
+
+    // 5. Teste rápido de geração com o primeiro modelo
+    const modeloTeste = modelosUnicos[0];
+    if (statusEl) {
+      statusEl.innerHTML = `
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 10px 12px; color: #93c5fd; font-size: 12px; display: flex; gap: 8px; align-items: center;">
+          <i data-lucide="loader-2" class="spin" style="width: 16px; height: 16px; flex-shrink: 0; color: #60a5fa;"></i>
+          <span>Modelos encontrados! Testando geração com <strong>${escapeHtml(modeloTeste.name)}</strong>...</span>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    const testRes = await fetch(`https://generativelanguage.googleapis.com/${modeloTeste.apiVer}/models/${modeloTeste.name}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: 'OK' }] }],
+        generationConfig: { maxOutputTokens: 5 }
+      })
+    });
+
+    if (!testRes.ok) {
+      const errBody = await testRes.text();
+      let msg = `HTTP ${testRes.status}`;
+      try {
+        const j = JSON.parse(errBody);
+        if (j?.error?.message) msg = j.error.message;
+      } catch (_) {}
+      throw new Error(`Falha no teste com ${modeloTeste.name}: ${msg}`);
+    }
+
+    // Armazena no cache de modelos validados para buscas instantâneas
+    cacheModelosValidos = modelosUnicos;
+
+    const listaExibicao = modelosUnicos.slice(0, 4).map(m => m.name).join(', ');
+    if (statusEl) {
+      statusEl.innerHTML = `
+        <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 10px 12px; color: #86efac; font-size: 12px; display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; gap: 8px; align-items: center; font-weight: 700;">
+            <i data-lucide="check-circle-2" style="width: 16px; height: 16px; flex-shrink: 0; color: #22c55e;"></i>
+            <span>Chave Gemini validada e ativa com sucesso!</span>
+          </div>
+          <div style="color: #cbd5e1; font-size: 11px; line-height: 1.4;">
+            <strong>Modelo Selecionado:</strong> ${escapeHtml(modeloTeste.name)} (${modeloTeste.apiVer})<br>
+            <strong>Modelos Autorizados:</strong> ${escapeHtml(listaExibicao)}${modelosUnicos.length > 4 ? '...' : ''}
+          </div>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
+    mostrarToast(`Chave Gemini OK! Modelo ativo: ${modeloTeste.name}`, 'success');
+    return true;
+
+  } catch (err) {
+    console.warn('[Teste Gemini] Erro:', err);
+    if (statusEl) {
+      statusEl.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 12px; color: #fca5a5; font-size: 12px; display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; gap: 8px; align-items: center; font-weight: 700;">
+            <i data-lucide="alert-triangle" style="width: 16px; height: 16px; flex-shrink: 0; color: #ef4444;"></i>
+            <span>Falha ao validar chave Gemini</span>
+          </div>
+          <span style="font-size: 11.5px; color: #cbd5e1; line-height: 1.4;">${escapeHtml(err.message)}</span>
+          <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+            Obtenha uma chave gratuita válida no <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline;">Google AI Studio</a>.
+          </span>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
+    mostrarToast(`Erro na chave: ${err.message}`, 'error');
+    return false;
+  } finally {
+    if (btnTestar) {
+      btnTestar.disabled = false;
+      btnTestar.innerHTML = `<i data-lucide="activity" style="width: 14px; height: 14px;"></i><span>Testar Chave Gemini</span>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+}
+
 // Consulta o ListModels oficial do Google em v1beta e v1 para descobrir os modelos reais da chave
 async function obterModelosValidos(apiKey) {
   if (cacheModelosValidos && cacheModelosValidos.length > 0) {
     return cacheModelosValidos;
   }
+
+  const modelos = [];
+  const nomesVistos = new Set();
+  let erroAutenticacao = null;
 
   for (const apiVer of ['v1beta', 'v1']) {
     try {
@@ -298,28 +490,15 @@ async function obterModelosValidos(apiKey) {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.models) && data.models.length > 0) {
-          const modelos = data.models
-            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-            .map(m => ({
-              apiVer,
-              name: m.name.replace(/^models\//, '')
-            }));
-
-          if (modelos.length > 0) {
-            // Prioriza modelos flash rápidos e modernos
-            modelos.sort((a, b) => {
-              const score = (m) => {
-                const n = m.name.toLowerCase();
-                if (n.includes('flash') && (n.includes('3.5') || n.includes('2.5') || n.includes('2.0'))) return 100;
-                if (n.includes('flash')) return 90;
-                if (n.includes('pro')) return 50;
-                return 10;
-              };
-              return score(b) - score(a);
-            });
-
-            cacheModelosValidos = modelos;
-            return modelos;
+          for (const m of data.models) {
+            const methods = m.supportedGenerationMethods || [];
+            if (methods.includes('generateContent')) {
+              const cleanName = m.name.replace(/^models\//, '');
+              if (!nomesVistos.has(cleanName)) {
+                nomesVistos.add(cleanName);
+                modelos.push({ apiVer, name: cleanName });
+              }
+            }
           }
         }
       } else {
@@ -329,30 +508,52 @@ async function obterModelosValidos(apiKey) {
           try {
             const errJson = JSON.parse(errText);
             if (errJson?.error?.message) {
-              throw new Error(`Google API (${res.status}): ${errJson.error.message}`);
+              erroAutenticacao = `Google API (${res.status}): ${errJson.error.message}`;
             }
           } catch (_) {}
         }
       }
     } catch (e) {
       console.warn(`[ListModels ${apiVer}] Exceção:`, e);
-      if (e.message && e.message.includes('Google API')) throw e;
     }
   }
 
-  // Fallback de contingência caso a listagem não responda
+  // Se a chave for comprovadamente inválida / sem permissão na Google API
+  if (modelos.length === 0 && erroAutenticacao) {
+    throw new Error(erroAutenticacao);
+  }
+
+  if (modelos.length > 0) {
+    // Prioriza modelos rápidos e inteligentes
+    modelos.sort((a, b) => {
+      const score = (m) => {
+        const n = m.name.toLowerCase();
+        if (n.includes('flash') && (n.includes('2.0') || n.includes('2.5') || n.includes('3.5'))) return 100;
+        if (n.includes('flash')) return 90;
+        if (n.includes('pro')) return 50;
+        return 10;
+      };
+      return score(b) - score(a);
+    });
+
+    cacheModelosValidos = modelos;
+    return modelos;
+  }
+
+  // Fallback seguro caso a listagem não responda (sem modelos com 404 em v1beta)
   return [
     { apiVer: 'v1beta', name: 'gemini-2.0-flash' },
-    { apiVer: 'v1beta', name: 'gemini-1.5-flash-latest' },
+    { apiVer: 'v1beta', name: 'gemini-2.0-flash-exp' },
     { apiVer: 'v1', name: 'gemini-1.5-flash' },
-    { apiVer: 'v1', name: 'gemini-1.5-pro' }
+    { apiVer: 'v1', name: 'gemini-1.5-pro' },
+    { apiVer: 'v1beta', name: 'gemini-1.5-flash-latest' }
   ];
 }
 
 // Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
 async function chamarGeminiGrounding(apiKey, prompt) {
   const modelos = await obterModelosValidos(apiKey);
-  let ultimoErro = null;
+  const errosDetalhados = [];
 
   for (const item of modelos) {
     const { apiVer, name } = item;
@@ -397,22 +598,23 @@ async function chamarGeminiGrounding(apiKey, prompt) {
       } else {
         const errBody = await response.text();
         console.warn(`[Gemini ${name} (${apiVer})] HTTP ${response.status}:`, errBody);
-        let msg = `HTTP ${response.status} (${name})`;
+        let msg = `${name}: HTTP ${response.status}`;
         try {
           const jsonErr = JSON.parse(errBody);
           if (jsonErr?.error?.message) {
-            msg = `${jsonErr.error.message} (${name})`;
+            msg = `${name}: ${jsonErr.error.message}`;
           }
         } catch (_) {}
-        ultimoErro = new Error(msg);
+        errosDetalhados.push(msg);
       }
     } catch (e) {
       console.warn(`[Gemini ${name}] Exceção:`, e);
-      ultimoErro = e;
+      errosDetalhados.push(`${name}: ${e.message}`);
     }
   }
 
-  throw ultimoErro || new Error('Não foi possível obter resposta dos servidores da IA.');
+  const resumo = errosDetalhados.slice(0, 2).join(' | ');
+  throw new Error(resumo || 'Não foi possível obter resposta dos servidores da IA.');
 }
 
 function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info', linkPortal = null, textoPortal = null) {
@@ -429,6 +631,12 @@ function mostrarFeedbackConsulta(titulo, mensagem, tipo = 'info', linkPortal = n
         <p style="color: var(--text-muted); font-size: 12.5px; line-height: 1.45; margin: 0; max-width: 320px;">
           ${mensagem}
         </p>
+        ${tipo === 'error' ? `
+          <button type="button" class="btn-card-action primary" onclick="window.radarActions.irParaAjustesETestarChave()" style="margin-top: 4px; padding: 8px 14px; gap: 6px;">
+            <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
+            <span>Verificar Chave em Ajustes</span>
+          </button>
+        ` : ''}
         ${linkPortal ? `
           <a href="${escapeHtml(linkPortal)}" target="_blank" rel="noopener noreferrer" class="btn-card-action primary" style="text-decoration: none; margin-top: 4px; padding: 8px 14px; gap: 6px;">
             <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
