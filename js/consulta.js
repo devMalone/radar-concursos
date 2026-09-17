@@ -27,10 +27,14 @@ export function resetarFormularioConsulta() {
   const form = document.getElementById('consultaForm');
   const loading = document.getElementById('consultaLoading');
   const statusBox = document.getElementById('consultaStatusFeedback');
+  const title = document.getElementById('consultaLoadingTitle');
+  const sub = document.getElementById('consultaLoadingSub');
 
   if (form) form.style.display = 'block';
   if (loading) loading.style.display = 'none';
   if (statusBox) statusBox.style.display = 'none';
+  if (title) title.textContent = 'Consultando Portais & Diários Oficiais...';
+  if (sub) sub.textContent = 'O Gemini 3.5 com Google Search Grounding está apurando certames e publicações oficiais recentes para o município.';
 }
 
 export async function executarConsultaAvulsaLive() {
@@ -102,7 +106,10 @@ DATA DE REFERÊNCIA HOJE: ${hojeStr} (Ano atual: ${anoAtual}).
      - OU o portal oficial de concursos/serviços da prefeitura.
    - NUNCA invente rotas falsas (como /licitacoes, /concursos-2024) que geram tela 404.
 
-Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
+Retorne EXCLUSIVAMENTE um array JSON puro iniciando com '[' e terminando com ']'.
+NÃO escreva introduções, explicações, saudações nem notas com marcadores de rodapé [1].
+Se não houver certames recentes, retorne exatamente:
+[]
 [
   {
     "cidade": "${cidade}",
@@ -120,17 +127,29 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
   }
 ]`;
 
+  const timer1 = setTimeout(() => {
+    const title = document.getElementById('consultaLoadingTitle');
+    const sub = document.getElementById('consultaLoadingSub');
+    if (title) title.textContent = 'Varrendo Diários Oficiais & Bancas...';
+    if (sub) sub.textContent = 'Buscando publicações na Vunesp, IBAM, Consulplan e portais municipais...';
+  }, 2500);
+
+  const timer2 = setTimeout(() => {
+    const title = document.getElementById('consultaLoadingTitle');
+    const sub = document.getElementById('consultaLoadingSub');
+    if (title) title.textContent = 'Auditando Vigência e Prazos...';
+    if (sub) sub.textContent = 'Verificando se as inscrições estão abertas ou em andamento e eliminando rotas 404...';
+  }, 5200);
+
   try {
     const candidateText = await chamarGeminiGrounding(apiKey, prompt);
+    clearTimeout(timer1);
+    clearTimeout(timer2);
 
-    // Limpa delimitadores de bloco JSON
-    const clean = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const sIdx = clean.indexOf('[');
-    const eIdx = clean.lastIndexOf(']');
+    const parsedItems = extrairJsonConcursos(candidateText);
 
-    if (sIdx !== -1 && eIdx !== -1) {
-      const parsedItems = JSON.parse(clean.substring(sIdx, eIdx + 1));
-      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+    if (Array.isArray(parsedItems)) {
+      if (parsedItems.length > 0) {
         parsedItems.forEach(rawItem => {
           const item = sanitizarItemConcurso(rawItem);
           item.id = `avulso_${cidade}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -154,16 +173,26 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
         fecharModalAtual();
         mostrarToast(`🔍 ${parsedItems.length} certame(s) localizado(s) para ${cidade}!`, 'success');
         return;
+      } else {
+        // A IA respondeu confirmando que não há certames ativos
+        mostrarFeedbackConsulta(
+          'Nenhum certame localizado',
+          `Não foram encontradas publicações recentes de concursos ou processos seletivos para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.`,
+          'info'
+        );
+        return;
       }
     }
 
-    // Se nenhum item foi parseado
+    // Se nenhum formato válido foi identificado
     mostrarFeedbackConsulta(
       'Nenhum certame localizado',
       `Não foram encontradas publicações recentes de concursos ou processos seletivos para <strong>${escapeHtml(cidade)}</strong> com os critérios informados.`,
       'info'
     );
   } catch (err) {
+    clearTimeout(timer1);
+    clearTimeout(timer2);
     console.warn('[Consulta Gemini Grounding] Erro:', err);
     mostrarFeedbackConsulta(
       'Falha na Comunicação',
@@ -173,51 +202,100 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
   }
 }
 
-// Descobre dinamicamente os modelos disponíveis na conta do usuário ou usa fallback moderno (Gemini 3.5)
-async function obterModelosGemini(apiKey) {
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data.models)) {
-        const candidatos = data.models
-          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-          .map(m => m.name.replace(/^models\//, ''));
+// Extrai array JSON de forma blindada contra notas de rodapé de busca [1], [2] ou markdown
+export function extrairJsonConcursos(text) {
+  if (!text) return null;
 
-        // Priorização inteligente:
-        // 1º: gemini-3.5-flash-lite (recomendado pelo Google para alta velocidade)
-        // 2º: gemini-3.5-flash (alta capacidade)
-        // 3º: gemini-2.5-flash / outros flash
-        // 4º: demais modelos (pro, etc)
-        candidatos.sort((a, b) => {
-          const score = (m) => {
-            if (m === 'gemini-3.5-flash-lite') return 100;
-            if (m === 'gemini-3.5-flash') return 95;
-            if (m.includes('3.5') && m.includes('flash')) return 90;
-            if (m === 'gemini-2.5-flash') return 80;
-            if (m.includes('flash')) return 70;
-            return 10;
-          };
-          return score(b) - score(a);
-        });
+  // 1. Tenta extrair de blocos ```json ... ``` ou ``` ... ```
+  const codeBlockMatch = text.match(/```(?:json)?\s*(\[\s*[\s\S]*?\])\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    try {
+      const parsed = JSON.parse(codeBlockMatch[1]);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {}
+  }
 
-        if (candidatos.length > 0) {
-          return candidatos;
+  // 2. Procura pelo início de um array com objetos: [ { ... } ]
+  // A regex /\[\s*\{/ ignora notas de rodapé como [1] ou [fonte]
+  const sIdx = text.search(/\[\s*\{/);
+  if (sIdx !== -1) {
+    let profundidade = 0;
+    let fimReal = -1;
+    let emString = false;
+    let escape = false;
+
+    for (let i = sIdx; i < text.length; i++) {
+      const char = text[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === '\\') {
+        escape = true;
+        continue;
+      }
+      if (char === '"') {
+        emString = !emString;
+        continue;
+      }
+      if (!emString) {
+        if (char === '[') profundidade++;
+        else if (char === ']') {
+          profundidade--;
+          if (profundidade === 0) {
+            fimReal = i;
+            break;
+          }
         }
       }
     }
-  } catch (e) {
-    console.warn('[Gemini Discovery] Falha ao consultar lista de modelos:', e);
+
+    if (fimReal !== -1) {
+      try {
+        const candidate = text.substring(sIdx, fimReal + 1);
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
   }
 
-  // Fallback moderno e resiliente
-  return [
-    'gemini-3.5-flash-lite',
-    'gemini-3.5-flash',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash'
-  ];
+  // 3. Verifica se retornou array vazio []
+  if (/\[\s*\]/.test(text)) {
+    return [];
+  }
+
+  // 4. Fallback de emergência para objetos individuais
+  const regexObjetos = /\{[^{}]*"cidade"[^{}]*"titulo"[^{}]*\}/g;
+  const matches = text.match(regexObjetos);
+  if (matches && matches.length > 0) {
+    const items = [];
+    for (const m of matches) {
+      try {
+        items.push(JSON.parse(m));
+      } catch (e) {}
+    }
+    if (items.length > 0) return items;
+  }
+
+  return null;
+}
+
+const MODELOS_PADRAO = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
+];
+
+let cacheModelos = null;
+
+// Descobre dinamicamente os modelos disponíveis na conta ou usa padrão moderno direto
+async function obterModelosGemini(apiKey) {
+  if (cacheModelos && cacheModelos.length > 0) {
+    return cacheModelos;
+  }
+  return MODELOS_PADRAO;
 }
 
 // Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
