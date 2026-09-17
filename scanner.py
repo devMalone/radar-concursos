@@ -151,72 +151,80 @@ Retorne EXCLUSIVAMENTE um array JSON:
 ]
 """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
-    
-    payload = {
-        "contents": [
-            {
-                "parts": [{"text": prompt}]
-            }
-        ],
-        "tools": [
-            {"google_search": {}}
-        ]
-    }
-    
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
-    )
-    
-    try:
-        with urllib.request.urlopen(req, timeout=90) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            
-            candidates = res_data.get("candidates", [])
-            if not candidates:
-                log("Nenhum candidato retornado pelo Gemini.")
-                return []
-                
-            parts = candidates[0].get("content", {}).get("parts", [])
-            text_output = ""
-            for part in parts:
-                if "text" in part:
-                    text_output += part["text"]
-            
-            # Limpa possíveis delimitadores markdown de código ```json ... ```
-            cleaned_json = re.sub(r"```json\s*", "", text_output)
-            cleaned_json = re.sub(r"```\s*", "", cleaned_json).strip()
-            
-            # Localiza o primeiro [ e o último ]
-            start_idx = cleaned_json.find("[")
-            end_idx = cleaned_json.rfind("]")
-            
-            if start_idx != -1 and end_idx != -1:
-                json_str = cleaned_json[start_idx:end_idx + 1]
-                concursos = json.loads(json_str)
+    modelos = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    res_data = None
 
-                # Sanitização defensiva contra anacronismos
-                concursos_sanitizados = []
-                for item in concursos:
-                    texto = f"{item.get('titulo', '')} {item.get('prazo_inscricao', '')} {item.get('resumo_ia', '')}".lower()
-                    if item.get("status") == "Edital Aberto":
-                        if any(w in texto for w in ["2024", "2023", "2022", "encerrad", "provas realizadas", "provas aplicadas", "ocorreu em", "já ocorreram", "classificação"]):
-                            if any(w in texto for w in ["previsto", "estudos", "planeja", "novas vagas", "expansão"]):
-                                item["status"] = "Previsto"
-                            else:
-                                item["status"] = "Em Andamento (Recursos / Gabarito)"
-                    concursos_sanitizados.append(item)
+    for modelo in modelos:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "tools": [
+                {"google_search": {}}
+            ]
+        }
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        
+        try:
+            with urllib.request.urlopen(req, timeout=90) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                if res_data and res_data.get("candidates"):
+                    break
+        except Exception as e:
+            log(f"Falha ao consultar modelo {modelo}: {e}")
+            continue
 
-                log(f"Gemini identificou {len(concursos_sanitizados)} concursos/licitações relevantes e validados.")
-                return concursos_sanitizados
-            else:
-                log("Não foi possível localizar array JSON na resposta do modelo.")
-                return []
-                
-    except Exception as e:
-        log(f"Erro ao consultar API do Gemini: {e}")
+    if not res_data:
+        log("Todos os modelos da IA falharam.")
+        return []
+
+    candidates = res_data.get("candidates", [])
+    if not candidates:
+        log("Nenhum candidato retornado pelo Gemini.")
+        return []
+            
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text_output = ""
+    for part in parts:
+        if "text" in part:
+            text_output += part["text"]
+    
+    # Limpa possíveis delimitadores markdown de código ```json ... ```
+    cleaned_json = re.sub(r"```json\s*", "", text_output)
+    cleaned_json = re.sub(r"```\s*", "", cleaned_json).strip()
+    
+    # Localiza o primeiro [ e o último ]
+    start_idx = cleaned_json.find("[")
+    end_idx = cleaned_json.rfind("]")
+    
+    if start_idx != -1 and end_idx != -1:
+        json_str = cleaned_json[start_idx:end_idx + 1]
+        concursos = json.loads(json_str)
+
+        # Sanitização defensiva contra anacronismos
+        concursos_sanitizados = []
+        for item in concursos:
+            texto = f"{item.get('titulo', '')} {item.get('prazo_inscricao', '')} {item.get('resumo_ia', '')}".lower()
+            if item.get("status") == "Edital Aberto":
+                if any(w in texto for w in ["2024", "2023", "2022", "encerrad", "provas realizadas", "provas aplicadas", "ocorreu em", "já ocorreram", "classificação"]):
+                    if any(w in texto for w in ["previsto", "estudos", "planeja", "novas vagas", "expansão"]):
+                        item["status"] = "Previsto"
+                    else:
+                        item["status"] = "Em Andamento (Recursos / Gabarito)"
+            concursos_sanitizados.append(item)
+
+        log(f"Gemini identificou {len(concursos_sanitizados)} concursos/licitações relevantes e validados.")
+        return concursos_sanitizados
+    else:
+        log("Não foi possível localizar array JSON na resposta do modelo.")
         return []
 
 def normalizar_id(cidade, orgao, titulo):

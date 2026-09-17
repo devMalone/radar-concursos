@@ -67,7 +67,8 @@ window.radarActions = {
   toggleMostrarChave,
   abrirOpcoesAgenda,
   abrirGoogleCalendar,
-  baixarArquivoICS
+  baixarArquivoICS,
+  forcarAtualizacaoApp
 };
 
 // ================= SINCRONIZAÇÃO DE ALTURA (100dvh) =================
@@ -243,8 +244,39 @@ function adicionarCidadeCustom() {
 function salvarConfiguracoesApp() {
   const url = document.getElementById('cfgSupabaseUrl').value.trim();
   const key = document.getElementById('cfgSupabaseKey').value.trim();
-  const gemini = document.getElementById('cfgGeminiKey').value.trim();
+  const gemini = document.getElementById('cfgGeminiKey').value.trim().replace(/^["']|["']$/g, '');
   salvarConfiguracoes(url, key, gemini, state.config.interesses);
+}
+
+export async function forcarAtualizacaoApp() {
+  mostrarToast('Limpando cache e forçando atualização...', 'info');
+  try {
+    // 1. Limpa todas as instâncias do Cache Storage
+    if ('caches' in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map(key => caches.delete(key)));
+    }
+    
+    // 2. Desregistra todos os Service Workers ativos
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.unregister();
+      }
+    }
+
+    // 3. Garante persistência dos dados e credenciais do usuário
+    salvarLocal();
+
+    // 4. Recarrega contornando cache com parâmetro único
+    setTimeout(() => {
+      const reloadUrl = window.location.origin + window.location.pathname + '?v=' + Date.now();
+      window.location.replace(reloadUrl);
+    }, 500);
+  } catch (err) {
+    console.warn('[Forçar Atualização] Erro:', err);
+    window.location.reload(true);
+  }
 }
 
 async function testarNotificacaoNativa() {

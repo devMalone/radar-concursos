@@ -45,7 +45,8 @@ export async function executarConsultaAvulsaLive() {
     return;
   }
 
-  const apiKey = state.config.geminiKey;
+  const rawKey = state.config.geminiKey;
+  const apiKey = (rawKey || '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) {
     mostrarToast('Chave Gemini API não configurada. Insira na aba Ajustes.', 'error');
     return;
@@ -174,7 +175,12 @@ Retorne EXCLUSIVAMENTE um array JSON puro (sem explicações antes ou depois):
 
 // Executa a chamada à API Gemini testando modelos com suporte a Search Grounding
 async function chamarGeminiGrounding(apiKey, prompt) {
-  const modelos = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const modelos = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-2.0-flash-lite'
+  ];
   let ultimoErro = null;
 
   for (const modelo of modelos) {
@@ -198,7 +204,14 @@ async function chamarGeminiGrounding(apiKey, prompt) {
       } else {
         const errBody = await response.text();
         console.warn(`[Gemini ${modelo}] HTTP ${response.status}:`, errBody);
-        ultimoErro = new Error(`HTTP ${response.status}`);
+        let msg = `HTTP ${response.status} (${modelo})`;
+        try {
+          const jsonErr = JSON.parse(errBody);
+          if (jsonErr?.error?.message) {
+            msg = `${jsonErr.error.message} (${modelo})`;
+          }
+        } catch (_) {}
+        ultimoErro = new Error(msg);
       }
     } catch (e) {
       console.warn(`[Gemini ${modelo}] Exceção:`, e);
