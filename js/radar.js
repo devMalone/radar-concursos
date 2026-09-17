@@ -134,6 +134,9 @@ export function renderTimelineStepper(c) {
         <span class="step-label">Convocações</span>
       </div>
     </div>
+  `;
+}
+
 /* ==========================================================================
    MOTOR DE PRAZOS INTELIGENTES & CONTAGEM REGRESSIVA
    ========================================================================== */
