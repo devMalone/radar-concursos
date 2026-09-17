@@ -286,23 +286,41 @@ export function resetarCacheModelos() {
   cacheModelosValidos = null;
 }
 
+// Modelos oficiais suportados pela Google AI em 2026
+const MODELOS_OFICIAIS = [
+  { apiVer: 'v1beta', name: 'gemini-3.6-flash' },
+  { apiVer: 'v1beta', name: 'gemini-3.5-flash' },
+  { apiVer: 'v1beta', name: 'gemini-2.0-flash' },
+  { apiVer: 'v1', name: 'gemini-1.5-flash' },
+  { apiVer: 'v1', name: 'gemini-1.5-pro' }
+];
+
+// Modelos estritamente bloqueados/descontinuados pelo Google (NUNCA TENTAR)
+const MODELOS_DESCONTINUADOS = [
+  '2.5-flash',
+  '2.0-flash-lite',
+  '1.5-flash-8b',
+  'gemini-1.0',
+  'gemini-pro-vision'
+];
+
+export function isModeloDescontinuado(name) {
+  const n = (name || '').toLowerCase();
+  return MODELOS_DESCONTINUADOS.some(d => n.includes(d));
+}
+
 // Avalia a prioridade do modelo priorizando versões mais recentes (3.6, 3.5, 2.0)
-// e despriorizando modelos que o Google descontinuou para novos usuários
 export function calcularScoreModelo(name) {
   const n = (name || '').toLowerCase();
-  let score = 0;
+  if (isModeloDescontinuado(n)) return -99999;
   
+  let score = 0;
   if (n.includes('flash')) score += 1000;
   else if (n.includes('pro')) score += 500;
   
   const vMatch = n.match(/(\d+(?:\.\d+)?)/);
   if (vMatch) {
     score += parseFloat(vMatch[1]) * 100;
-  }
-
-  // Modelos descontinuados pelo Google para novos usuários
-  if (n.includes('2.5-flash') || n.includes('2.0-flash-lite')) {
-    score -= 600;
   }
 
   return score;
@@ -363,9 +381,9 @@ export async function testarChaveGemini(apiKeyManual = null) {
   }
 
   try {
-    // 4. Executa ListModels em v1beta e v1
-    const modelosUnicos = [];
-    const nomesVistos = new Set();
+    // 4. Executa ListModels em v1beta e v1 inicializando com os modelos oficiais do Google (3.6, 3.5, 2.0)
+    const modelosUnicos = [...MODELOS_OFICIAIS];
+    const nomesVistos = new Set(MODELOS_OFICIAIS.map(m => m.name));
     let ultimoErro = null;
 
     for (const apiVer of ['v1beta', 'v1']) {
@@ -378,6 +396,10 @@ export async function testarChaveGemini(apiKeyManual = null) {
               const methods = m.supportedGenerationMethods || [];
               if (methods.includes('generateContent')) {
                 const cleanName = m.name.replace(/^models\//, '');
+                // Descarta modelos expressamente obsoletos ou bloqueados pelo Google
+                if (isModeloDescontinuado(cleanName)) {
+                  continue;
+                }
                 if (!nomesVistos.has(cleanName)) {
                   nomesVistos.add(cleanName);
                   modelosUnicos.push({ apiVer, name: cleanName });
@@ -397,6 +419,11 @@ export async function testarChaveGemini(apiKeyManual = null) {
       } catch (err) {
         ultimoErro = err.message || 'Falha de conexão';
       }
+    }
+
+    // Se a Google API retornou erro de autenticação ou chave inválida
+    if (ultimoErro && (ultimoErro.includes('API key') || ultimoErro.includes('API_KEY') || ultimoErro.includes('PERMISSION') || ultimoErro.includes('400') || ultimoErro.includes('403'))) {
+      throw new Error(`Google API: ${ultimoErro}`);
     }
 
     if (modelosUnicos.length === 0) {
@@ -513,8 +540,8 @@ async function obterModelosValidos(apiKey) {
     return cacheModelosValidos;
   }
 
-  const modelos = [];
-  const nomesVistos = new Set();
+  const modelos = [...MODELOS_OFICIAIS];
+  const nomesVistos = new Set(MODELOS_OFICIAIS.map(m => m.name));
   let erroAutenticacao = null;
 
   for (const apiVer of ['v1beta', 'v1']) {
@@ -527,6 +554,8 @@ async function obterModelosValidos(apiKey) {
             const methods = m.supportedGenerationMethods || [];
             if (methods.includes('generateContent')) {
               const cleanName = m.name.replace(/^models\//, '');
+              // Descarta qualquer modelo obsoleto ou descontinuado
+              if (isModeloDescontinuado(cleanName)) continue;
               if (!nomesVistos.has(cleanName)) {
                 nomesVistos.add(cleanName);
                 modelos.push({ apiVer, name: cleanName });
